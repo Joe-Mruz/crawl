@@ -2,6 +2,12 @@
 
 # Dungeon Crawl Stone Soup
 
+## Foreword
+
+This project aims to provide a more relaxed Dungeon Crawl Stone Soup experience by easing some of the difficulty introduced in modern versions. The goal is not to remove the game's challenge, but to dial it back a little and reduce unnecessary tedium while remaining as faithful to the original game as possible. This means preserving the existing species, backgrounds, spells, and other core content rather than introducing new ones.
+
+To that end, we have removed exploration traps and the item-identification system, reverted monster attack-delay normalization, condensed the branch layout, and added a subtle 1.5x experience modifier to account for the shorter progression. These changes are intended to make the game less tedious and more approachable without fundamentally changing what makes Crawl Crawl.
+
 Dungeon Crawl Stone Soup is a game of dungeon exploration, combat and magic, involving characters of diverse skills, worshipping deities of great power and caprice. To win, you'll need to be a master of tactics and strategy, and prevail against overwhelming odds.
 
 ## Contents
