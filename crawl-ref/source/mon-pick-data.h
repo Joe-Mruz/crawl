@@ -79,14 +79,14 @@ static const vector<pop_entry> population[] =
   {  4,  5,  175, FALL, MONS_JACKAL },
   {  4,  5,  500, FALL, MONS_QUOKKA },
   {  4,  5,  375, FALL, MONS_DART_SLUG },
-  {  1,  8,  200, PEAK, MONS_GNOLL },
 
 // Shouldn't show up on D:1.
+  {  2,  8,  200, PEAK, MONS_GNOLL }, // JM: prevent D1 gnolls
   {  2,  5,  500, FALL, MONS_RIBBON_WORM },
   {  2,  6, 1000, FLAT, MONS_ADDER },
   {  3,  8, 1000, FLAT, MONS_ORC },
   {  3,  7,  400, PEAK, MONS_BOMBARDIER_BEETLE},
-  {  3,  6,  250, SEMI, MONS_CLOCKROACH },
+  {  5,  8,  1, SEMI, MONS_CLOCKROACH }, // JM: make clockroaches nearly unspawnable, and deeper
 
 // These historically don't get kills after D:7ish.
   {  4,  7,  800, PEAK, MONS_SCORPION },
@@ -95,7 +95,7 @@ static const vector<pop_entry> population[] =
   {  4,  7, 1000, PEAK, MONS_IGUANA },
   {  4,  7,  340, PEAK, MONS_PHANTOM },
   {  4,  8,  480, PEAK, MONS_JELLY },
-  {  4,  8,  340, PEAK, MONS_SLEEPCAP },
+  {  7,  11,  1, PEAK, MONS_SLEEPCAP }, // JM: make sleep caps almost unspawnable, and deeper
   {  4,  8,  350, PEAK, MONS_BLACK_BEAR },
 
   {  4, 10,  200, PEAK, MONS_GNOLL_BOUDA },
@@ -112,7 +112,7 @@ static const vector<pop_entry> population[] =
   {  5, 13,  600, PEAK, MONS_CENTAUR },
   {  5, 13,  200, PEAK, MONS_GNOLL_SERGEANT },
   {  5,  9,  100, PEAK, MONS_MARROWCUDA },
-  {  5, 11,  200, PEAK, MONS_KOBOLD_GEOMANCER },
+  {  7, 11,  200, PEAK, MONS_KOBOLD_GEOMANCER }, // JM: adjusted to appear slightly later
 
   {  6,  8,  500, PEAK, MONS_SKY_BEAST },
   {  6,  9, 1000, PEAK, MONS_BULLFROG },
@@ -122,7 +122,7 @@ static const vector<pop_entry> population[] =
   {  6, 11,  500, PEAK, MONS_KOBOLD_BRIGAND },
   {  6, 12,  600, PEAK, MONS_ORC_WARRIOR },
   {  7, 11,  500, PEAK, MONS_KILLER_BEE },
-  {  7, 11,  200, PEAK, MONS_HORNET },
+  {  7, 11,  100, PEAK, MONS_HORNET }, // JM: reduced frequency of hornets slightly
   {  7, 11,  350, PEAK, MONS_WYVERN },
   {  8, 12,  800, PEAK, MONS_YAK },
   {  8, 14,  350, PEAK, MONS_ACID_DRAGON },
@@ -433,8 +433,8 @@ static const vector<pop_entry> population[] =
   {  1,  4,   200, FLAT, MONS_ORB_SPIDER },
   {  1,  4,   350, RISE, MONS_ORB_SPIDER },
   // Top-tier threats:
-  {  1,  4,   100, FLAT, MONS_GHOST_MOTH },
-  {  1,  4,   175, RISE, MONS_GHOST_MOTH },
+  {  1,  4,   25, FLAT, MONS_GHOST_MOTH }, // JM: lowered frequency
+  {  1,  4,   25, RISE, MONS_GHOST_MOTH }, // JM: lowered frequency
   {  1,  4,   100, FLAT, MONS_EMPEROR_SCORPION },
   {  1,  4,   175, RISE, MONS_EMPEROR_SCORPION },
   {  1,  4,   100, FLAT, MONS_BROODMOTHER },

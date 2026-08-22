@@ -4355,6 +4355,13 @@ static void _builder_items()
         specif_type = OBJ_GOLD;  // Lots of gold in the orcish mines.
         items_levels *= 2;       // Four levels' worth, in fact.
     }
+    // JM: Keep items rates the same but much more powerful. This avoids an overload of items,
+    // but makes those finds more meaningful.
+    else
+    {
+        //items_wanted /= 2;
+        items_levels *= 20;
+    }
 
     for (i = 0; i < items_wanted; i++)
     {

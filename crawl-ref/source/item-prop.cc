@@ -2462,7 +2462,8 @@ static map<potion_type, item_rarity_type> _potion_rarity = {
 };
 
 static map<scroll_type, item_rarity_type> _scroll_rarity = {
-    { SCR_IDENTIFY,       RARITY_VERY_COMMON },
+    // JM: removed scroll of idenity - all items identified by default
+    //{ SCR_IDENTIFY,       RARITY_VERY_COMMON },
     { SCR_TELEPORTATION,  RARITY_COMMON },
     { SCR_AMNESIA,        RARITY_UNCOMMON },
     { SCR_NOISE,          RARITY_UNCOMMON },
@@ -2480,7 +2481,8 @@ static map<scroll_type, item_rarity_type> _scroll_rarity = {
     { SCR_SILENCE,        RARITY_RARE },
     { SCR_BRAND_WEAPON,   RARITY_RARE },
     { SCR_TORMENT,        RARITY_RARE },
-    { SCR_ACQUIREMENT,    RARITY_VERY_RARE },
+    { SCR_ACQUIREMENT,    RARITY_VERY_RARE}, // JM: could argue that this should be just RARE, to enable more
+                                        // interesting gearing choices...
 };
 
 item_rarity_type consumable_rarity(const item_def &item)

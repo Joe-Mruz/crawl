@@ -69,3 +69,16 @@
 # Turn the shift-vi keys into safe move, instead of run.
 # include = safe_move_shift.txt
 
+default_manual_training=true
+show_more=false
+tile_map_scale=1
+tile_cell_pixels=64
+show_travel_trail=true
+travel_delay=1
+explore_delay=1
+autofight_stop=45
+
+macros += M 1 zb
+macros += M 2 zc
+macros += M 3 zd
+macros += M 4 ze

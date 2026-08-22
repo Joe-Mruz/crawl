@@ -960,6 +960,10 @@ void item_check()
 
 bool item_def::is_identified() const
 {
+    // JM: items are always identified
+    return true;
+
+    /*
     if (flags & ISFLAG_IDENTIFIED)
         return true;
 
@@ -967,6 +971,7 @@ bool item_def::is_identified() const
         return true;
 
     return false;
+    */
 }
 
 void identify_item(item_def& item)

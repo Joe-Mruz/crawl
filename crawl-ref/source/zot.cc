@@ -70,7 +70,9 @@ static bool _zot_clock_active_in(branch_type br)
 // Is the zot clock running, or is it paused or stopped altogether?
 bool zot_clock_active()
 {
-    return _zot_clock_active_in(you.where_are_you);
+    // JM: disabled the zot clock
+    return false;
+    //return _zot_clock_active_in(you.where_are_you);
 }
 
 // Has the player stopped the zot clock?

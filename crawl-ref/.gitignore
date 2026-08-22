@@ -74,8 +74,13 @@ DEADJOE
 
 # Crawl generated junk
 arena.result
+bones/
 saves
 morgue
+logfile
+milestones
+prefs/
+scores
 *.map
 map.dump
 mapstat.log

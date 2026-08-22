@@ -736,7 +736,8 @@ const char* scroll_type_name(int scrolltype)
 {
     switch (static_cast<scroll_type>(scrolltype))
     {
-    case SCR_IDENTIFY:           return "identify";
+    // JM: removed identify scroll
+    //case SCR_IDENTIFY:           return "identify";
     case SCR_TELEPORTATION:      return "teleportation";
     case SCR_FEAR:               return "fear";
     case SCR_NOISE:              return "noise";
@@ -3116,14 +3117,14 @@ string cannot_read_item_reason(const item_def *item, bool temp, bool ident)
             if (you.has_mutation(MUT_NO_GRASPING))
                 return "There's no point in enchanting armour you can't use!";
             break;
-
+/* // JM: removed identify scroll
         case SCR_IDENTIFY:
             if (you.props.exists(IDENTIFIED_ALL_KEY))
                 return "There is nothing left to identify.";
             if (have_passive(passive_t::identify_items))
                 return "You have no need of identification.";
             break;
-
+*/
         case SCR_SUMMONING:
         case SCR_BUTTERFLIES:
             if (you.allies_forbidden())
@@ -3183,9 +3184,10 @@ string cannot_read_item_reason(const item_def *item, bool temp, bool ident)
         case SCR_BRAND_WEAPON:
             return _no_items_reason(OSEL_BRANDABLE_WEAPON, true);
 
+            /* // JM: removed identify scroll
         case SCR_IDENTIFY:
             return _no_items_reason(OSEL_UNIDENT, true);
-
+            */
         case SCR_FOG:
         case SCR_POISON:
             if (env.level_state & LSTATE_STILL_WINDS)

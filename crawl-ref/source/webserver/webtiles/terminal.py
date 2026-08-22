@@ -86,7 +86,18 @@ class TerminalRecorder(object):
             # so, sometimes, a race condition here leads to the main process
             # reloading its config...currently some key cases are handled
             # elsewhere by a brute force delay.
-            asyncio.get_event_loop().remove_signal_handler(signal.SIGHUP)
+            # Try to get the running loop safely for Python 3.10+ / 3.14
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # Fallback if no loop is running yet in this context
+                try:
+                    loop = asyncio.get_event_loop_policy().get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+            loop.remove_signal_handler(signal.SIGHUP)
 
             # Set window size
             cols, lines = self.get_terminal_size()

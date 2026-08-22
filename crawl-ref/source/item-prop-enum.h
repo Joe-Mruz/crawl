@@ -439,7 +439,8 @@ enum gem_type
 
 enum scroll_type
 {
-    SCR_IDENTIFY,
+    // JM scroll of identify removed - all items identified by default
+    //SCR_IDENTIFY,
     SCR_TELEPORTATION,
     SCR_FEAR,
     SCR_NOISE,

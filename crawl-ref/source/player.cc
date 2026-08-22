@@ -2669,7 +2669,12 @@ unsigned int gain_exp(unsigned int exp_gained)
     if (crawl_state.game_is_arena())
         return 0;
 
-    you.experience_pool += exp_gained;
+    // JM: 1.5x modifier on XP gains to compensate for condensed S-branches, vaults, depths and zot.
+    //     Also serves to accelerate the early/mid game. Note: done this way for integer math.
+    //     This is pretty touchy - too much of a buff (2-3x) makes things way too easy and feels broken.
+    //     So this should be subtle, but enough to be impactful.
+    you.experience_pool += (exp_gained * 3) / 2;
+    //you.experience_pool += exp_gained;
 
     if (player_under_penance(GOD_HEPLIAKLQANA))
         return 0; // no XP for you!

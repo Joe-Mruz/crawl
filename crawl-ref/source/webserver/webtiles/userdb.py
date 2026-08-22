@@ -5,7 +5,9 @@ import os
 import os.path
 import random
 import re
+import secrets
 import sqlite3
+import string
 from base64 import urlsafe_b64encode
 import contextlib
 import collections
@@ -317,12 +319,18 @@ def make_salt(saltlen):  # type: (int) -> str
 def encrypt_pw(passwd):  # type: (str) -> str
     passwd = passwd[0:config.get('max_passwd_length')]
     crypt_algorithm = config.get('crypt_algorithm')
+    
     if crypt_algorithm == "broken":
         salt = passwd
     elif crypt_algorithm:
-        salt = "${}${}$".format(crypt_algorithm, make_salt(config.get('crypt_salt_length')))
+        # FIX: Changed "${}${}$" to "${}$" so it outputs "$6$salt" instead of "$$6$$salt"
+        salt = "${}$".format(crypt_algorithm, make_salt(config.get('crypt_salt_length')))
     else:
-        salt = make_salt(2)
+        # FIX: Legacy 2-character salts fail on modern glibc. 
+        # Fall back to a safe, modern SHA-512 salt if no algorithm is specified.
+        random_chars = ''.join(secrets.choice(string.ascii_letters + string.digits + './') for _ in range(16))
+        salt = f"$6${random_chars}"
+        
     return crypt.crypt(passwd, salt)
 
 

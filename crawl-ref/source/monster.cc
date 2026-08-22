@@ -438,12 +438,27 @@ vorpal_damage_type monster::damage_type(int which_attack) const
  */
 random_var monster::attack_delay(const item_def *projectile) const
 {
+
+    /* JM: The following reverts normalized monster attack delay, which
+        was a change made by commit 581982f around the .26/.27 versions.
+        Merged the old version with the modern weapon adjustments per
+        brand (since heavy brand did not exist in the old version). */
+    const item_def* weap = weapon();
+
+    if (!weap || (projectile && is_throwable(this, *projectile)))
+        return random_var(10);
+
+    random_var delay(weapon_adjust_delay(*weap, property(*weap, PWPN_SPEED)));
+    return (random_var(10) + delay) / 2;
+
+    /*
     const item_def* weap = weapon();
     if (!weap || (projectile && is_throwable(this, *projectile)))
         return random_var(10);
 
     random_var delay(weapon_adjust_delay(*weap, 10));
     return delay;
+   */ 
 }
 
 random_var monster::melee_attack_delay() const

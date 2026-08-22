@@ -3805,7 +3805,8 @@ static bool _do_move_monster(monster& mons, const coord_def& delta)
 
     _swim_or_move_energy(mons);
 
-    _maybe_launch_opportunity_attack(mons, orig_pos);
+    // JM: disabled attacks of opportunity... okay with random energy
+    //_maybe_launch_opportunity_attack(mons, orig_pos);
     _maybe_randomize_energy(mons, orig_pos);
 
     return true;

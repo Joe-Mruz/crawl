@@ -201,6 +201,11 @@ bool has_non_solid_adjacent(coord_def pos)
 
 static int _ood_fuzzspan(level_id &place)
 {
+    // JM: disabled OOD monsters by returning 0 unconditionally
+    //return 0;
+
+    // JM: retaining OOD rules since they are integral to the spawning system, but 
+    // will provide better tools to deal with OOD
     if (place.branch != BRANCH_DUNGEON || place.depth >= 5)
         return 5;
 

@@ -2588,8 +2588,8 @@ bool uncancel_blinking()
 
 static bool _is_cancellable_scroll(scroll_type scroll)
 {
-    return scroll == SCR_IDENTIFY
-           || scroll == SCR_BLINKING
+    return //scroll == SCR_IDENTIFY || // JM: removed identify scroll 
+           scroll == SCR_BLINKING
            || scroll == SCR_ENCHANT_ARMOUR
            || scroll == SCR_AMNESIA
            || scroll == SCR_BRAND_WEAPON
@@ -3139,7 +3139,7 @@ bool read(item_def* scroll, dist *target)
             cancel_scroll = !_handle_brand_weapon(alreadyknown, pre_succ_msg);
 
         break;
-
+    /* JM: removed identify scroll
     case SCR_IDENTIFY:
         if (!alreadyknown)
         {
@@ -3155,7 +3155,7 @@ bool read(item_def* scroll, dist *target)
             cancel_scroll = !_identify(alreadyknown, pre_succ_msg);
 
         break;
-
+    */
     case SCR_ENCHANT_ARMOUR:
         if (!alreadyknown)
         {
@@ -3240,7 +3240,8 @@ bool read(item_def* scroll, dist *target)
     if (!alreadyknown
         && which_scroll != SCR_BRAND_WEAPON
         && which_scroll != SCR_ENCHANT_WEAPON
-        && which_scroll != SCR_IDENTIFY
+        // JM: removed identify scroll
+        //&& which_scroll != SCR_IDENTIFY
         && which_scroll != SCR_ENCHANT_ARMOUR
         && which_scroll != SCR_AMNESIA
         && which_scroll != SCR_ACQUIREMENT)

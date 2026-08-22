@@ -565,7 +565,8 @@ unsigned int item_value(item_def item, bool ident)
                 valued += 30;
                 break;
 
-            case SCR_IDENTIFY:
+            // JM: removed identify scroll
+            //case SCR_IDENTIFY:
 #if TAG_MAJOR_VERSION == 34
             case SCR_CURSE_ARMOUR:
             case SCR_CURSE_WEAPON:

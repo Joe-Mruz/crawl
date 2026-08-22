@@ -25,7 +25,7 @@ const Branch branches[NUM_BRANCHES] =
       'D', {}, branch_noise::normal, DEFAULT_MON_DIE_SIZE, /*unused*/
       {} },
 
-    { BRANCH_TEMPLE, BRANCH_DUNGEON, 4, 7, 1, 5,
+    { BRANCH_TEMPLE, BRANCH_DUNGEON, 3, 4, 1, 5, // JM: temple spawns on D3-4
       brflag::no_items | brflag::fully_map,
       DNGN_ENTER_TEMPLE, DNGN_EXIT_TEMPLE, NUM_FEATURES,
       "Temple", "the Ecumenical Temple", "Temple",
@@ -34,7 +34,7 @@ const Branch branches[NUM_BRANCHES] =
       'T', {}, branch_noise::normal, DEFAULT_MON_DIE_SIZE,
       {} },
 
-    { BRANCH_ORC, BRANCH_DUNGEON, 9, 12, 2, 10,
+    { BRANCH_ORC, BRANCH_DUNGEON, 7, 8, 2, 10, // JM: orc spawns on D7-8
       brflag::spotty,
       DNGN_ENTER_ORC, DNGN_EXIT_ORC, NUM_FEATURES,
       "Orcish Mines", "the Orcish Mines", "Orc",
@@ -63,7 +63,7 @@ const Branch branches[NUM_BRANCHES] =
       {}},
 #endif
 
-    { BRANCH_LAIR, BRANCH_DUNGEON, 8, 11, 5, 10,
+    { BRANCH_LAIR, BRANCH_DUNGEON, 6, 7, 5, 10, // JM: Lair spawns on D6-7, and is 5 levels until I can figure out getting L3 to spawn L5 vaults.
       brflag::none,
       DNGN_ENTER_LAIR, DNGN_EXIT_LAIR, NUM_FEATURES,
       "Lair", "the Lair of Beasts", "Lair",
@@ -72,7 +72,7 @@ const Branch branches[NUM_BRANCHES] =
       'L', {}, branch_noise::normal, 8,
       {BRANCH_DUNGEON} },
 
-    { BRANCH_SWAMP, BRANCH_LAIR, 2, 3, 4, 15,
+    { BRANCH_SWAMP, BRANCH_LAIR, 3, 3, 2, 15, // JM: S branches on lair 3 and are 2 floors
       brflag::dangerous_end | brflag::spotty,
       DNGN_ENTER_SWAMP, DNGN_EXIT_SWAMP, NUM_FEATURES,
       "Swamp", "the Swamp", "Swamp",
@@ -81,7 +81,7 @@ const Branch branches[NUM_BRANCHES] =
       'S', { RUNE_SWAMP }, branch_noise::loud, 8,
       {BRANCH_ORC} },
 
-    { BRANCH_SHOALS, BRANCH_LAIR, 2, 3, 4, 15,
+    { BRANCH_SHOALS, BRANCH_LAIR, 3, 3, 2, 15, // JM: S branches on lair 3 and are 2 floors
       brflag::dangerous_end,
       DNGN_ENTER_SHOALS, DNGN_EXIT_SHOALS, NUM_FEATURES,
       "Shoals", "the Shoals", "Shoals",
@@ -90,7 +90,7 @@ const Branch branches[NUM_BRANCHES] =
       'A', { RUNE_SHOALS }, branch_noise::loud, DEFAULT_MON_DIE_SIZE,
       {BRANCH_ORC} },
 
-    { BRANCH_SNAKE, BRANCH_LAIR, 2, 3, 4, 15,
+    { BRANCH_SNAKE, BRANCH_LAIR, 3, 3, 2, 15, // JM: S branches on lair 3 and are 2 floors
       brflag::dangerous_end,
       DNGN_ENTER_SNAKE, DNGN_EXIT_SNAKE, NUM_FEATURES,
       "Snake Pit", "the Snake Pit", "Snake",
@@ -99,7 +99,7 @@ const Branch branches[NUM_BRANCHES] =
       'P', { RUNE_SNAKE }, branch_noise::normal, DEFAULT_MON_DIE_SIZE,
       {BRANCH_ORC} },
 
-    { BRANCH_SPIDER, BRANCH_LAIR, 2, 3, 4, 15,
+    { BRANCH_SPIDER, BRANCH_LAIR, 3, 3, 2, 15, // JM: S branches on lair 3 and are 2 floors
       brflag::dangerous_end,
       DNGN_ENTER_SPIDER, DNGN_EXIT_SPIDER, NUM_FEATURES,
       "Spider Nest", "the Spider Nest", "Spider",
@@ -108,7 +108,7 @@ const Branch branches[NUM_BRANCHES] =
       'N', { RUNE_SPIDER }, branch_noise::normal, DEFAULT_MON_DIE_SIZE,
       {BRANCH_ORC} },
 
-    { BRANCH_SLIME, BRANCH_LAIR, 4, 5, 5, 17,
+    { BRANCH_SLIME, BRANCH_LAIR, 5, 5, 5, 17, // JM: slime on lair 5, still 5 floors
       brflag::no_items | brflag::dangerous_end | brflag::spotty | brflag::no_shafts,
       DNGN_ENTER_SLIME, DNGN_EXIT_SLIME, NUM_FEATURES,
       "Slime Pits", "the Pits of Slime", "Slime",
@@ -117,7 +117,7 @@ const Branch branches[NUM_BRANCHES] =
       'M', { RUNE_SLIME }, branch_noise::quiet, 7,
       {BRANCH_LAIR, BRANCH_VAULTS } },
 
-    { BRANCH_VAULTS, BRANCH_DUNGEON, 13, 14, 5, 19,
+    { BRANCH_VAULTS, BRANCH_DUNGEON, 14, 14, 3, 19, // JM: vaults always spawns on D14
       brflag::dangerous_end,
       DNGN_ENTER_VAULTS, DNGN_EXIT_VAULTS, NUM_FEATURES,
       "Vaults", "the Vaults", "Vaults",
@@ -127,7 +127,7 @@ const Branch branches[NUM_BRANCHES] =
       {BRANCH_ELF, BRANCH_CRYPT } },
 #if TAG_MAJOR_VERSION == 34
 
-    { BRANCH_BLADE, BRANCH_VAULTS, 3, 4, 1, 21,
+    { BRANCH_BLADE, BRANCH_VAULTS, 2, 2, 1, 21, // JM: hall of blades in vaults 2
       brflag::no_items,
       DNGN_ENTER_BLADE, DNGN_EXIT_BLADE, NUM_FEATURES,
       "Hall of Blades", "the Hall of Blades", "Blade",
@@ -137,7 +137,7 @@ const Branch branches[NUM_BRANCHES] =
       {}},
 #endif
 
-    { BRANCH_CRYPT, BRANCH_VAULTS, 2, 3, 3, 19,
+    { BRANCH_CRYPT, BRANCH_VAULTS, 2, 2, 3, 19, // JM: crypt in vaults 2
       brflag::dangerous_end,
       DNGN_ENTER_CRYPT, DNGN_EXIT_CRYPT, NUM_FEATURES,
       "Crypt", "the Crypt", "Crypt",
@@ -211,7 +211,7 @@ const Branch branches[NUM_BRANCHES] =
       'Y', { RUNE_TARTARUS }, branch_noise::normal, HELL_MON_DIE_SIZE,
       {BRANCH_VESTIBULE} },
 
-    { BRANCH_ZOT, BRANCH_DEPTHS, 4, 4, 5, 27,
+    { BRANCH_ZOT, BRANCH_DEPTHS, 3, 3, 3, 27, // JM: Zot on depths 3 now, and is only 3 floors
       brflag::dangerous_end,
       DNGN_ENTER_ZOT, DNGN_EXIT_ZOT, NUM_FEATURES,
       "Zot", "the Realm of Zot", "Zot",
@@ -222,7 +222,7 @@ const Branch branches[NUM_BRANCHES] =
       {BRANCH_DEPTHS} },
 #if TAG_MAJOR_VERSION == 34
 
-    { BRANCH_FOREST, BRANCH_VAULTS, 2, 3, 5, 19,
+    { BRANCH_FOREST, BRANCH_VAULTS, 2, 2, 5, 19, // JM: forest on vaults 2
       brflag::spotty,
       DNGN_ENTER_FOREST, DNGN_EXIT_FOREST, NUM_FEATURES,
       "Forest", "the Enchanted Forest", "Forest",
@@ -252,7 +252,7 @@ const Branch branches[NUM_BRANCHES] =
              RUNE_GLOORX_VLOQ }, branch_noise::normal, 8,
       {} },
 
-    { BRANCH_ZIGGURAT, BRANCH_DEPTHS, 1, 4, 27, 27,
+    { BRANCH_ZIGGURAT, BRANCH_DEPTHS, 1, 3, 27, 27, // JM: Zigg on depth 1-3
       brflag::no_x_level_travel | brflag::no_items,
       DNGN_ENTER_ZIGGURAT, DNGN_EXIT_ZIGGURAT, DNGN_FLOOR,
       "Ziggurat", "a ziggurat", "Zig",
@@ -374,7 +374,7 @@ const Branch branches[NUM_BRANCHES] =
 #endif
 #if TAG_MAJOR_VERSION == 34
 
-    { BRANCH_DEPTHS, BRANCH_DUNGEON, 15, 15, 4, 22,
+    { BRANCH_DEPTHS, BRANCH_DUNGEON, 15, 15, 3, 22,
       brflag::none,
       DNGN_ENTER_DEPTHS, DNGN_EXIT_DEPTHS, NUM_FEATURES,
       "Depths", "the Depths", "Depths",

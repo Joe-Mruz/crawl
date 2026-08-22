@@ -2553,9 +2553,13 @@ static void _check_sanctuary()
 
 static void _check_trapped()
 {
+    // JM: disabled random exploration traps
+    //     The code to set trapped still exists,
+    //     but we don't act upon it.
     if (you.trapped)
     {
-        do_trap_effects();
+        // JM: don't act on exploration traps
+        //do_trap_effects();
         you.trapped = false;
     }
 }
