@@ -60,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
     let bind_port = config.bind_port;
 
     let state = AppState::new(config, users);
+    let games = state.games.clone();
     let router = webtiles_rs::http::build_router(state);
 
     let addr = format!("{bind_address}:{bind_port}");
@@ -70,8 +71,48 @@ async fn main() -> anyhow::Result<()> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 
+    stop_running_games(&games).await;
+
     tracing::info!("Bye!");
     Ok(())
+}
+
+/// Matches `ws_handler.shutdown()`/`stop_everything`: ask every still-running
+/// game to save and quit (`SIGHUP`), then wait for them to actually exit
+/// before letting the process itself exit. Without this, `axum`'s graceful
+/// shutdown only stops the HTTP/WebSocket layer - it has no idea any DCSS
+/// child processes exist, so they'd be orphaned (left running, requiring a
+/// manual `kill`) once this process exits, since they're on their own PTY
+/// session and don't receive this process's SIGINT/SIGTERM.
+async fn stop_running_games(games: &webtiles_rs::game::manager::GameManager) {
+    let sessions = games.all_sessions().await;
+    if sessions.is_empty() {
+        return;
+    }
+    tracing::info!(count = sessions.len(), "stopping running games before exit");
+    for session in &sessions {
+        session.request_stop();
+    }
+
+    const POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
+    const GRACE_PERIOD: std::time::Duration = std::time::Duration::from_secs(15);
+    let deadline = tokio::time::Instant::now() + GRACE_PERIOD;
+    while tokio::time::Instant::now() < deadline {
+        if games.count().await == 0 {
+            return;
+        }
+        tokio::time::sleep(POLL_INTERVAL).await;
+    }
+
+    let remaining = games.all_sessions().await;
+    if !remaining.is_empty() {
+        tracing::warn!(count = remaining.len(), "games did not stop in time, killing forcibly");
+        for session in &remaining {
+            session.request_kill();
+        }
+        // give the forced kill a brief moment to land before giving up.
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    }
 }
 
 async fn shutdown_signal() {

@@ -71,6 +71,13 @@ impl GameManager {
     pub async fn count(&self) -> usize {
         self.games.read().await.len()
     }
+
+    /// Snapshot of every currently-registered session, used by the
+    /// shutdown sequence to stop each one (matching Python's
+    /// `ws_handler.shutdown()` iterating over `processes`).
+    pub async fn all_sessions(&self) -> Vec<Arc<GameSession>> {
+        self.games.read().await.values().cloned().collect()
+    }
 }
 
 #[cfg(test)]
