@@ -228,6 +228,14 @@ impl Default for ServerConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GameTemplate {
+    /// Only present (and used) for `games.d/*.yml` list entries, which are
+    /// keyed by an inline `id:` field (see `base.yaml`); the `config.yml`
+    /// map form keys templates by the map key instead and typically omits
+    /// this field entirely.
+    pub id: String,
+    /// A template may itself inherit from another template (e.g. `trunk`
+    /// inheriting from `default`), same as a game.
+    pub template: Option<String>,
     #[serde(flatten)]
     pub fields: GameFields,
 }
@@ -355,9 +363,10 @@ impl ServerConfig {
                 self.games.entry(game.id.clone()).or_insert(game);
             }
             for template in doc.templates {
-                // templates in games.d are keyed by an `id` field too, mirroring games
-                if let Some(id) = template.fields.name.clone() {
-                    self.templates.entry(id).or_insert(template);
+                // games.d list entries key templates by an inline `id:`
+                // field (see games.d/base.yaml), same as games.
+                if !template.id.is_empty() {
+                    self.templates.entry(template.id.clone()).or_insert(template);
                 }
             }
         }
@@ -394,13 +403,14 @@ impl ServerConfig {
     /// Resolve a game by id, applying template inheritance.
     pub fn resolve_game(&self, id: &str) -> Option<ResolvedGame> {
         let game = self.games.get(id)?;
-        Some(self.resolve(&game.fields, game.template.as_deref(), id.to_string()))
+        let template = implicit_template(game.template.as_deref(), id);
+        Some(self.resolve(&game.fields, template, id.to_string()))
     }
 
-    fn resolve(&self, fields: &GameFields, template: Option<&str>, id: String) -> ResolvedGame {
+    fn resolve(&self, fields: &GameFields, template: Option<String>, id: String) -> ResolvedGame {
         let mut seen = std::collections::HashSet::new();
         let mut chain = vec![fields.clone()];
-        let mut next = template.map(|s| s.to_string());
+        let mut next = template;
         while let Some(name) = next {
             if !seen.insert(name.clone()) {
                 break; // templating loop guard, matches Python's `validate()` loop check
@@ -408,7 +418,7 @@ impl ServerConfig {
             match self.templates.get(&name) {
                 Some(t) => {
                     chain.push(t.fields.clone());
-                    next = None; // GameTemplate has no further `template` field by design
+                    next = implicit_template(t.template.as_deref(), &name);
                 }
                 None => break,
             }
@@ -418,6 +428,18 @@ impl ServerConfig {
             merge_game_fields(&mut merged, f);
         }
         ResolvedGame { id, fields: merged }
+    }
+}
+
+/// A game/template with no explicit `template:` implicitly inherits from
+/// the `default` template, unless it *is* `default`/`base` (Python:
+/// `GameConfig.__init__`, `if use_template and template_name is None and
+/// not is_metatemplate(self.id): template_name = ... 'default'`).
+fn implicit_template(explicit: Option<&str>, self_id: &str) -> Option<String> {
+    match explicit {
+        Some(name) => Some(name.to_string()),
+        None if self_id != "default" && self_id != "base" => Some("default".to_string()),
+        None => None,
     }
 }
 
@@ -646,6 +668,7 @@ mod tests {
                     rcfile_path: Some("./rcs/".to_string()),
                     ..Default::default()
                 },
+                ..Default::default()
             },
         );
         cfg.games.insert(
@@ -672,11 +695,13 @@ mod tests {
     #[test]
     fn template_loop_does_not_infinite_loop() {
         let mut cfg = ServerConfig::default();
-        // a template referencing itself indirectly is a pathological config;
-        // resolve_game only follows one level today (GameTemplate can't
-        // itself have a `template` field), so this mainly guards against
-        // future regressions if that changes.
-        cfg.templates.insert("a".to_string(), GameTemplate::default());
+        // a template that (indirectly) refers back to itself must not
+        // infinite-loop resolve_game, since templates can now chain via
+        // their own `template` field.
+        cfg.templates.insert(
+            "a".to_string(),
+            GameTemplate { template: Some("a".to_string()), ..Default::default() },
+        );
         cfg.games.insert(
             "g".to_string(),
             GameConfig {
@@ -687,5 +712,27 @@ mod tests {
         );
         let resolved = cfg.resolve_game("g").unwrap();
         assert_eq!(resolved.id, "g");
+    }
+
+    #[test]
+    fn real_base_yaml_games_d_file_resolves_correctly() {
+        // regression test: games.d list entries key templates by an inline
+        // `id:` field, not a `name:` field - a prior bug silently dropped
+        // every template (and thus every game, since all of them use one).
+        let games_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../webserver/games.d");
+        if !games_dir.join("base.yaml").exists() {
+            eprintln!("skipping: ../webserver/games.d/base.yaml not found");
+            return;
+        }
+        let mut cfg = ServerConfig::default();
+        cfg.load_games_dir(&games_dir).unwrap();
+
+        assert!(!cfg.games.is_empty(), "expected games.d/base.yaml to define games");
+        let resolved = cfg
+            .resolve_game("dcss-web-trunk")
+            .expect("dcss-web-trunk should resolve");
+        assert_eq!(resolved.fields.crawl_binary, Some(PathBuf::from("./crawl")));
+        assert_eq!(resolved.fields.version.as_deref(), Some("trunk"));
+        assert_eq!(resolved.fields.rcfile_path.as_deref(), Some("./rcs/"));
     }
 }
