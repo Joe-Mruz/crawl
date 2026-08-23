@@ -1,4 +1,3 @@
-consumable_shortcut ^= scroll of identify:i
 consumable_shortcut ^= scroll of teleportation:t
 consumable_shortcut ^= scroll of fear:f
 consumable_shortcut ^= scroll of noise:N
