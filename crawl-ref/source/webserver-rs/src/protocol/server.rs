@@ -41,6 +41,9 @@ pub enum ServerMessage {
     RegisterFail {
         reason: String,
     },
+    LoginRequired {
+        game: String,
+    },
     LobbyClear,
     LobbyEntry {
         #[serde(flatten)]
@@ -75,6 +78,9 @@ pub enum ServerMessage {
     GameClient {
         version: String,
         content: String,
+    },
+    Dump {
+        url: String,
     },
     GoLobby,
     GoAdmin,
@@ -214,6 +220,12 @@ mod tests {
             ServerMessage::ForceTerminateQuery.to_json().unwrap(),
             r#"{"msg":"force_terminate?"}"#
         );
+    }
+
+    #[test]
+    fn login_required_serializes_game_field() {
+        let msg = ServerMessage::LoginRequired { game: "Play Trunk".to_string() };
+        assert_eq!(msg.to_json().unwrap(), r#"{"msg":"login_required","game":"Play Trunk"}"#);
     }
 
     #[test]

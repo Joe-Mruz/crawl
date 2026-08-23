@@ -1,4 +1,5 @@
 //! Placeholder — game process/session/manager modules are implemented next.
+pub mod launch;
 pub mod manager;
 pub mod process;
 pub mod session;

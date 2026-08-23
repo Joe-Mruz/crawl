@@ -285,11 +285,11 @@ pub fn update_crash_info(info: &mut CrashInfo, line: &str, morgue_url: Option<&s
     }
 }
 
-fn basename(path: &str) -> &str {
+pub(crate) fn basename(path: &str) -> &str {
     path.rsplit('/').next().unwrap_or(path)
 }
 
-fn strip_extension(name: &str) -> &str {
+pub(crate) fn strip_extension(name: &str) -> &str {
     match name.rfind('.') {
         Some(idx) => &name[..idx],
         None => name,

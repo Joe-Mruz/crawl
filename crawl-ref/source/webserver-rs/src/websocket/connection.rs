@@ -33,7 +33,10 @@ struct Connection {
     state: AppState,
     username: Option<String>,
     is_admin: bool,
+    /// The game this connection is attached to, either as the player
+    /// (`is_player`) or as a spectator.
     watching: Option<Arc<GameSession>>,
+    is_player: bool,
     outgoing_rx: Option<mpsc::Receiver<OutgoingMessage>>,
     compressor: FrameCompressor,
     batcher: MessageBatcher,
@@ -47,6 +50,7 @@ pub async fn handle_socket(mut socket: WebSocket, state: AppState) {
         username: None,
         is_admin: false,
         watching: None,
+        is_player: false,
         outgoing_rx: None,
         compressor: FrameCompressor::new(),
         batcher: MessageBatcher::new(),
@@ -118,6 +122,12 @@ async fn run_message_loop(mut socket: WebSocket, mut conn: Connection) {
     }
 
     if let Some(watching) = &conn.watching {
+        if conn.is_player {
+            // matches `on_close`: a lost connection stops the game (no
+            // detached-play support without `watch_socket_dirs`, which is
+            // NOT YET PORTED - see ARCHITECTURE.md §4.4).
+            watching.request_stop();
+        }
         watching.remove_watcher(conn.id).await;
     }
     tracing::info!(connection_id = conn.id, "socket closed");
@@ -135,12 +145,14 @@ fn queue_outgoing(conn: &mut Connection, message: OutgoingMessage) {
 async fn handle_client_frame(conn: &mut Connection, frame: &str) {
     match ClientMessage::parse(frame) {
         Ok(ClientMessage::Known(known)) => handle_known_message(conn, known).await,
-        Ok(ClientMessage::PassThrough { msg, .. }) => {
-            // NOT YET PORTED: forwarding raw input to an attached game
-            // process's socket (requires the play/spawn flow to be wired
-            // up first - see the module doc). For now, unrecognized
-            // messages while not playing are logged like Python does.
-            tracing::debug!(connection_id = conn.id, %msg, "unhandled pass-through message");
+        Ok(ClientMessage::PassThrough { msg, raw }) => {
+            if conn.is_player {
+                if let Some(session) = &conn.watching {
+                    session.send_input(raw);
+                }
+            } else {
+                tracing::debug!(connection_id = conn.id, %msg, "unhandled pass-through message");
+            }
         }
         Err(e) => {
             tracing::warn!(connection_id = conn.id, error = %e, "failed to parse client message");
@@ -157,11 +169,12 @@ async fn handle_known_message(conn: &mut Connection, message: KnownClientMessage
             conn.state.login_tokens.forget(&cookie).await;
         }
         KnownClientMessage::Pong => {}
+        KnownClientMessage::Play { game_id } => play(conn, &game_id).await,
         KnownClientMessage::Watch { username } => watch(conn, &username).await,
         KnownClientMessage::GoLobby => go_lobby(conn).await,
         KnownClientMessage::ChatMsg { text } => chat(conn, &text).await,
-        // NOT YET PORTED: play/register/rc-editing/admin/password-reset -
-        // see module doc.
+        // NOT YET PORTED: register/rc-editing/admin/password-reset - see
+        // module doc.
         _ => {
             tracing::debug!(connection_id = conn.id, "message type not yet implemented");
         }
@@ -181,6 +194,7 @@ async fn login(conn: &mut Connection, username: &str, password: &str) {
                     admin: conn.is_admin,
                 })
                 .ok();
+            send_game_links(conn).await;
         }
         Ok((false, _, Some(reason))) => {
             conn.batcher.queue(&ServerMessage::LoginFail { reason: Some(reason) }).ok();
@@ -197,6 +211,7 @@ async fn token_login(conn: &mut Connection, cookie: &str) {
         conn.batcher
             .queue(&ServerMessage::LoginSuccess { username, admin: conn.is_admin })
             .ok();
+        send_game_links(conn).await;
     } else {
         conn.batcher.queue(&ServerMessage::LoginFail { reason: None }).ok();
     }
@@ -248,11 +263,72 @@ async fn go_lobby(conn: &mut Connection) {
         return;
     }
     if let Some(session) = conn.watching.take() {
+        if conn.is_player {
+            session.request_stop();
+        }
         session.remove_watcher(conn.id).await;
     }
+    conn.is_player = false;
     conn.outgoing_rx = None;
     conn.batcher.queue(&ServerMessage::GoLobby).ok();
     send_lobby(conn).await;
+}
+
+/// `play`: start (or attach to) a configured game, matching
+/// `ws_handler.start_crawl`.
+///
+/// NOT YET PORTED: non-`dgl_mode` auto-start-on-connect, save-slot cache
+/// invalidation, and `-no-player-bones` for account-restricted users.
+async fn play(conn: &mut Connection, game_id: &str) {
+    if conn.state.config.dgl_mode && !conn.state.config.games.contains_key(game_id) {
+        go_lobby(conn).await;
+        return;
+    }
+
+    if conn.state.config.dgl_mode && conn.username.is_none() {
+        let name = conn
+            .state
+            .config
+            .resolve_game(game_id)
+            .and_then(|r| r.fields.name.clone())
+            .unwrap_or_else(|| game_id.to_string());
+        if conn.watching.is_some() {
+            go_lobby(conn).await;
+        }
+        conn.batcher.queue(&ServerMessage::LoginRequired { game: name }).ok();
+        return;
+    }
+
+    if conn.watching.is_some() {
+        // ignore repeated play requests while already attached to a game
+        // (a coarser version of Python's per-game_id comparison, which
+        // also allows switching games by going through the lobby first)
+        return;
+    }
+
+    let username = conn.username.clone().unwrap_or_else(|| "game".to_string());
+    match crate::game::launch::start_game(
+        &conn.state.config,
+        &conn.state.games,
+        &conn.state.game_data,
+        &username,
+        game_id,
+    )
+    .await
+    {
+        Ok(session) => {
+            let (watcher, rx) = Watcher::new(conn.id, conn.username.clone(), true, conn.is_admin);
+            session.add_watcher(watcher).await;
+            conn.outgoing_rx = Some(rx);
+            conn.is_player = true;
+            conn.watching = Some(session);
+            conn.batcher.queue(&ServerMessage::GameStarted).ok();
+        }
+        Err(e) => {
+            tracing::warn!(connection_id = conn.id, %game_id, error = %e, "failed to start game");
+            go_lobby(conn).await;
+        }
+    }
 }
 
 async fn chat(conn: &mut Connection, text: &str) {
@@ -295,6 +371,28 @@ async fn send_lobby(conn: &mut Connection) {
             .ok();
     }
     conn.batcher.queue(&ServerMessage::LobbyComplete).ok();
+}
+
+/// Send the "Play now:" links (one per configured game), matching
+/// `send_game_links`. Simplified: renders a fixed `<br>`-separated list
+/// directly in Rust rather than through `game_links.html` (whose
+/// `{% for %}`/`{% try %}` constructs are beyond the scope of
+/// `http::templates`' purpose-built engine - see its module doc); also
+/// omits save-slot-info greying-out (NOT YET PORTED).
+async fn send_game_links(conn: &mut Connection) {
+    let Some(username) = conn.username.clone() else { return };
+    let mut html = String::from("Play now:");
+    for id in conn.state.config.games.keys() {
+        let Some(resolved) = conn.state.config.resolve_game(id) else { continue };
+        let name = resolved.fields.name.clone().unwrap_or_else(|| id.clone());
+        let name = resolved.templated(&name, Some(&username)).unwrap_or(name);
+        html.push_str(&format!(
+            r##"<br><a href="#play-{}">{}</a>"##,
+            html_escape(id),
+            html_escape(&name)
+        ));
+    }
+    conn.batcher.queue(&ServerMessage::SetGameLinks { content: html }).ok();
 }
 
 /// Flush any queued messages as one batched, optionally-compressed frame.

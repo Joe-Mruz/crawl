@@ -55,6 +55,7 @@ libc = "0.2"
 
 pty-process = { version = "0.4", features = ["async"] }
 notify = "6"
+time = "0.3"
 
 futures-util = "0.3"
 bytes = "1"

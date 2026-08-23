@@ -35,6 +35,13 @@ binary):
   lobby-entry construction.
 - WebSocket connection handling: login, token login, lobby navigation,
   spectating, chat, connection-limit rejection, periodic ping/pong.
+- **Playing a game end-to-end**: `play` launches a real DCSS process
+  (PTY + the crawl↔webtiles Unix socket), attaches the connection as the
+  player, forwards raw input, renders `game_client` on `client_path`,
+  and `go_lobby`/disconnect cooperatively stops the process (`SIGHUP`).
+  Validated against the real `crawl` binary in `tests/play_flow.rs`.
+- The "Play now" game links sent after login (`set_game_links`),
+  driving the client's Play button(s).
 - HTTP endpoints: `/`, `/status/version/`, `/status/lobby/`,
   `/gamedata/<version>/<path>`, static asset serving.
 - A minimal, purpose-built template renderer covering the actual Tornado
@@ -42,32 +49,22 @@ binary):
 
 ## What is NOT yet implemented (do not point real users at this yet)
 
-- **Playing a game end-to-end over the websocket.** The `play`/`get_rc`/
-  `set_rc` message handlers, forwarding raw input to an attached game
-  process's socket, and the full `start_crawl`/stale-lock-purge orchestration
-  that ties `game::manager`, `game::process`, and `game::socket` together
-  into "a player clicked Play" are not wired up yet. The pieces exist and
-  are individually tested; the orchestration layer connecting them is the
-  next major chunk of work.
+- **Stale-lock purge and crash recovery** (`ARCHITECTURE.md` §4.3): if a
+  previous process for a username crashed/left a lock file, `play` does
+  not detect or clean that up before starting a new one.
 - Registration, password change/reset (including email sending), admin
   commands (`admin_announce`, `admin_pw_reset`, etc.), RC file
   editing over the websocket.
-- `watch_socket_dirs` (discovering externally-started games via inotify).
-- The CLI admin subcommands (`password`/`ban`/`flag`, matching
-  `wtutil.py`).
-- Daemonization, pidfile handling, privilege-shedding, chroot, SSL/TLS
-  binding, multiple bind-pairs.
-- Byte-exact `/status/lobby/` JSON schema (currently reuses the internal
-  `LobbyEntry` shape rather than Python's ad-hoc fields - see
-  `PROTOCOL.md` §8).
-- Save-slot info collection, milestone file tailing, admin-only socket
-  stats in the lobby.
+- `-no-player-bones` / account-hold restrictions on newly started games.
+- ttyrec recording during `play` (the plumbing exists in
+  `game::process`, just not wired into `game::launch::start_game` yet).
+- `watch_socket_dirs` (discovering externally-started games via inotify),
+  and therefore no "reconnect to my still-running game" support.
+- Non-`dgl_mode` ("local webtiles") auto-start-on-connect.
 
 ## Recommended path to production readiness
 
-1. Wire up `play`/game-process orchestration in `websocket/connection.rs`
-   using `game::manager`, `game::process`, and `game::socket` (all
-   individually implemented and tested).
+1. Add ttyrec recording and stale-lock/crash recovery to `game::launch`.
 2. Port the remaining message handlers (registration, password flows, RC
    editing, admin commands).
 3. Run both servers side-by-side against a shared `passwd.db3`/game

@@ -109,6 +109,16 @@ pub struct ExitInfo {
     pub dump_url: Option<String>,
 }
 
+/// Signal sent from a websocket connection to the task supervising this
+/// game's DCSS process (`game::launch::supervise_process`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProcessControl {
+    /// `SIGHUP`: cooperative stop, matches `CrawlProcessHandlerBase.stop`.
+    Stop,
+    /// `SIGABRT`: forced kill, matches `.kill()` after `kill_timeout`.
+    Kill,
+}
+
 /// State for one running game. Shared behind an `Arc` + internal
 /// `RwLock`s so unrelated games never contend on the same lock (see
 /// `ARCHITECTURE.md` "Shared State").
@@ -125,11 +135,31 @@ pub struct GameSession {
     where_info: RwLock<WhereInfo>,
     last_milestone: RwLock<Option<String>>,
     exit_info: RwLock<ExitInfo>,
+    /// Raw client messages to forward verbatim to the process socket
+    /// (`game::launch::bridge_socket` owns the receiving end).
+    input_tx: mpsc::UnboundedSender<String>,
+    /// Stop/kill signals for the process (`game::launch::supervise_process`
+    /// owns the receiving end).
+    control_tx: mpsc::UnboundedSender<ProcessControl>,
 }
 
 impl GameSession {
+    /// Plain constructor for tests/lobby-only use, where nothing is
+    /// actually driving a process (input/stop are accepted but silently
+    /// go nowhere, since the paired receivers are dropped immediately).
     pub fn new(username: impl Into<String>, game_config_id: impl Into<String>) -> Self {
-        Self {
+        Self::new_with_channels(username, game_config_id).0
+    }
+
+    /// Real constructor used by `game::launch::start_game`: also returns
+    /// the receiving ends of the input/control channels.
+    pub fn new_with_channels(
+        username: impl Into<String>,
+        game_config_id: impl Into<String>,
+    ) -> (Self, mpsc::UnboundedReceiver<String>, mpsc::UnboundedReceiver<ProcessControl>) {
+        let (input_tx, input_rx) = mpsc::unbounded_channel();
+        let (control_tx, control_rx) = mpsc::unbounded_channel();
+        let session = Self {
             id: next_game_id(),
             username: username.into(),
             game_config_id: game_config_id.into(),
@@ -140,7 +170,29 @@ impl GameSession {
             where_info: RwLock::new(WhereInfo::default()),
             last_milestone: RwLock::new(None),
             exit_info: RwLock::new(ExitInfo::default()),
-        }
+            input_tx,
+            control_tx,
+        };
+        (session, input_rx, control_rx)
+    }
+
+    /// Forward one raw client message verbatim to the process socket,
+    /// matching `CrawlProcessHandler.handle_input`'s pass-through of
+    /// everything except `force_terminate`/`stop_stale_process_purge`
+    /// (those two are webserver-only and NOT YET PORTED here - see
+    /// `ARCHITECTURE.md` §4.3).
+    pub fn send_input(&self, raw_message: impl Into<String>) {
+        let _ = self.input_tx.send(raw_message.into());
+    }
+
+    /// Request a cooperative stop (`SIGHUP`), matching `.stop()`.
+    pub fn request_stop(&self) {
+        let _ = self.control_tx.send(ProcessControl::Stop);
+    }
+
+    /// Request a forced kill (`SIGABRT`), matching `.kill()`.
+    pub fn request_kill(&self) {
+        let _ = self.control_tx.send(ProcessControl::Kill);
     }
 
     pub fn idle_time(&self) -> Duration {
