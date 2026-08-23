@@ -37,9 +37,6 @@ pub struct ServerConfig {
     pub password_db: PathBuf,
     pub settings_db: PathBuf,
 
-    pub static_path: PathBuf,
-    pub template_path: PathBuf,
-
     pub server_socket_path: Option<PathBuf>,
     pub server_id: String,
 
@@ -155,9 +152,6 @@ impl Default for ServerConfig {
 
             password_db: PathBuf::from("./webserver/passwd.db3"),
             settings_db: PathBuf::from("./webserver/user_settings.db3"),
-
-            static_path: PathBuf::from("./webserver/static"),
-            template_path: PathBuf::from("./webserver/templates/"),
 
             server_socket_path: None,
             server_id: String::new(),
@@ -327,12 +321,6 @@ impl ServerConfig {
         }
         if let Some(v) = overrides.bind_address {
             self.bind_address = v;
-        }
-        if let Some(v) = overrides.static_path {
-            self.static_path = v;
-        }
-        if let Some(v) = overrides.template_path {
-            self.template_path = v;
         }
         if let Some(v) = overrides.password_db {
             self.password_db = v;
@@ -586,8 +574,6 @@ struct OverrideDoc {
     dgl_mode: Option<bool>,
     bind_port: Option<u16>,
     bind_address: Option<String>,
-    static_path: Option<PathBuf>,
-    template_path: Option<PathBuf>,
     password_db: Option<PathBuf>,
     settings_db: Option<PathBuf>,
     use_game_yaml: Option<bool>,

@@ -17,8 +17,6 @@ bind_port: 8080
 
 password_db: "./webserver/passwd.db3"
 settings_db: "./webserver/user_settings.db3"
-static_path: "./webserver/static"
-template_path: "./webserver/templates/"
 
 allow_password_reset: false
 admin_password_reset: false

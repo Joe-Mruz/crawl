@@ -43,8 +43,18 @@ setting — *not* listed above as an explicit route, but Tornado auto-adds
 
 Rust equivalent: Axum router in `http/mod.rs`, handlers in `http/handlers.rs`.
 `GameDataHandler`'s per-version static roots become a small in-memory
-`HashMap<VersionHash, PathBuf>` behind an `RwLock`, served with `tower-http`'s
-`ServeDir` per lookup (see `http/game_data.rs`).
+`HashMap<VersionHash, PathBuf>` behind an `RwLock`, served by reading the
+file directly (see `http/game_data.rs`) — this is inherently disk-based,
+since it points at whatever directory an external `crawl` binary reports.
+
+Our own lobby page's `client.html`/`banner.html`/`footer.html` and
+`/static/*` assets are **not** read from `crawl-ref/source/webserver/` at
+all: they're compiled into the `webtiles-rs` binary from
+`webserver-rs/assets/` via `rust_embed` (see `http/assets.rs`), so the
+Rust server has no runtime or build-time dependency on the Python
+implementation's directory. This is a stopgap; the lobby UI is planned to
+be rewritten in Leptos (see `MIGRATION.md`), which will replace this
+template-substitution approach entirely.
 
 ## 3. WebSocket lifecycle (`webtiles/ws_handler.py: CrawlWebSocket`)
 

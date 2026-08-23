@@ -7,7 +7,7 @@ use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::response::{Html, IntoResponse, Json};
 
-use crate::http::templates::{render_file, TemplateContext};
+use crate::http::templates::{render_embedded, TemplateContext};
 use crate::state::AppState;
 
 /// `GET /`: renders `client.html`. See `../../ARCHITECTURE.md` §2 and
@@ -49,7 +49,7 @@ pub async fn main_page(
         ctx = ctx.with_bool("reset_token", true).with_string("reset_token", token);
     }
 
-    match render_file(&state.config.template_path, "client.html", &ctx) {
+    match render_embedded("client.html", &ctx) {
         Ok(html) => Html(html).into_response(),
         Err(e) => {
             tracing::error!(error = %e, "failed to render client.html");

@@ -82,8 +82,6 @@ Key defaults (see `src/config.rs` for the complete, authoritative list):
 | `dgl_mode` | `true` |
 | `bind_port` | `8080` |
 | `password_db` | `./webserver/passwd.db3` |
-| `static_path` | `./webserver/static` |
-| `template_path` | `./webserver/templates/` |
 | `max_connections` | `100` |
 | `connection_timeout_secs` | `600` |
 | `max_idle_time_secs` | `18000` |

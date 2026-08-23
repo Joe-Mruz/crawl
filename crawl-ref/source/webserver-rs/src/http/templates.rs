@@ -1,9 +1,15 @@
 //! A minimal, purpose-built substitute for Tornado's template engine,
-//! covering exactly the constructs actually used by the WebTiles
-//! templates in `crawl-ref/source/webserver/templates/` (`client.html`,
-//! `banner.html`, `footer.html`) - not a general-purpose template engine.
-//! `game_links.html`/`shutdown.html` (game-links list, admin-only stats,
-//! chat-window HTML fragments) are NOT YET PORTED; see `ARCHITECTURE.md`.
+//! covering exactly the constructs actually used by the WebTiles-derived
+//! templates - not a general-purpose template engine, and not intended to
+//! grow into one; the lobby UI is planned to move to Leptos (see
+//! `MIGRATION.md`), at which point [`render_embedded`] and its templates
+//! go away. Two independent template sources use this same syntax:
+//! - Our own lobby page (`client.html`, `banner.html`, `footer.html`),
+//!   compiled into the binary from `assets/templates/` - see
+//!   [`render_embedded`] and `http/assets.rs`.
+//! - `game.html`, reported per-connected-game-process via `client_path`
+//!   (an external, per-crawl-build directory outside our control, so it
+//!   must stay disk-based) - see [`render_file`] and `game/launch.rs`.
 //!
 //! Supported syntax:
 //! - `{{ static_url("path") }}` -> `/static/path`
@@ -23,6 +29,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::error::{Result, WebtilesError};
+use crate::http::assets::Templates;
 
 #[derive(Debug, Clone, Default)]
 pub struct TemplateContext {
@@ -43,22 +50,42 @@ impl TemplateContext {
 }
 
 /// Render a template file, resolving `{% include %}` relative to
-/// `template_dir`.
+/// `template_dir`. Used only for `game.html`, whose directory is reported
+/// by an external `crawl` process at runtime.
 pub fn render_file(template_dir: &Path, name: &str, ctx: &TemplateContext) -> Result<String> {
     let path = template_dir.join(name);
     let source = std::fs::read_to_string(&path)
         .map_err(|e| WebtilesError::Internal(format!("failed to read template {name}: {e}")))?;
-    render_str(&source, template_dir, ctx)
+    render_with(&source, ctx, &|inc| render_file(template_dir, inc, ctx))
 }
 
 pub fn render_str(source: &str, template_dir: &Path, ctx: &TemplateContext) -> Result<String> {
-    let expanded = expand_includes(source, template_dir, ctx)?;
+    render_with(source, ctx, &|inc| render_file(template_dir, inc, ctx))
+}
+
+/// Render one of our own lobby-page templates, compiled into the binary
+/// via `rust_embed` (`assets/templates/`) - no runtime dependency on
+/// `crawl-ref/source/webserver/templates/`.
+pub fn render_embedded(name: &str, ctx: &TemplateContext) -> Result<String> {
+    let source = load_embedded(name)?;
+    render_with(&source, ctx, &|inc| render_embedded(inc, ctx))
+}
+
+fn load_embedded(name: &str) -> Result<String> {
+    let file = Templates::get(name)
+        .ok_or_else(|| WebtilesError::Internal(format!("embedded template not found: {name}")))?;
+    String::from_utf8(file.data.into_owned())
+        .map_err(|e| WebtilesError::Internal(format!("embedded template {name} is not utf8: {e}")))
+}
+
+fn render_with(source: &str, ctx: &TemplateContext, include: &dyn Fn(&str) -> Result<String>) -> Result<String> {
+    let expanded = expand_includes(source, include)?;
     let expanded = strip_set_tags(&expanded);
     let expanded = eval_conditionals(&expanded, ctx)?;
     Ok(substitute_expressions(&expanded, ctx))
 }
 
-fn expand_includes(source: &str, template_dir: &Path, ctx: &TemplateContext) -> Result<String> {
+fn expand_includes(source: &str, include: &dyn Fn(&str) -> Result<String>) -> Result<String> {
     let mut out = String::with_capacity(source.len());
     let mut rest = source;
     loop {
@@ -73,7 +100,7 @@ fn expand_includes(source: &str, template_dir: &Path, ctx: &TemplateContext) -> 
         let end = start + end + 2;
         out.push_str(&rest[..start]);
         let tag_inner = rest[start + "{% include ".len()..end - 2].trim();
-        let included = render_file(template_dir, tag_inner, ctx)?;
+        let included = include(tag_inner)?;
         out.push_str(&included);
         rest = &rest[end..];
     }
@@ -334,17 +361,26 @@ mod tests {
     }
 
     #[test]
-    fn renders_real_banner_template_if_present() {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../webserver/templates");
-        if !dir.join("banner.html").exists() {
-            eprintln!("skipping: banner.html not found at {dir:?}");
-            return;
-        }
+    fn renders_real_banner_template() {
+        // banner.html is bundled in assets/templates/ (embedded via
+        // rust_embed), so this no longer depends on ../webserver.
         let ctx = TemplateContext::default()
             .with_bool("username", true)
             .with_string("username", "alice");
-        let out = render_file(&dir, "banner.html", &ctx).unwrap();
+        let out = render_embedded("banner.html", &ctx).unwrap();
         assert!(out.contains("Welcome to WebTiles!"));
         assert!(out.contains("Hello, alice!"));
     }
+
+    #[test]
+    fn renders_real_client_html_with_banner_include() {
+        let ctx = TemplateContext::default()
+            .with_string("socket_server", "ws://x/socket")
+            .with_string("game_version", "0.34")
+            .with_string("fail_safe_game_version", "0.34");
+        let out = render_embedded("client.html", &ctx).unwrap();
+        assert!(out.contains("Welcome to WebTiles!"));
+        assert!(out.contains(r#"var socket_server = "ws://x/socket";"#));
+    }
 }
+

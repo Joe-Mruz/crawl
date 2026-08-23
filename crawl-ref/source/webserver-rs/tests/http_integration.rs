@@ -24,7 +24,6 @@ async fn spawn_test_server() -> std::net::SocketAddr {
 
     let mut config = ServerConfig::default();
     config.dgl_mode = true;
-    config.template_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../webserver/templates");
     let state = AppState::new(config, users);
     let router = webtiles_rs::http::build_router(state);
 
@@ -86,6 +85,17 @@ async fn main_page_renders_client_html_with_socket_server_substituted() {
 async fn unknown_gamedata_version_is_not_found() {
     let addr = spawn_test_server().await;
     let (status, _) = http_get(addr, "/gamedata/deadbeef/foo.png").await;
+    assert_eq!(status, 404);
+}
+
+#[tokio::test]
+async fn static_route_serves_embedded_assets_not_a_404() {
+    let addr = spawn_test_server().await;
+    let (status, response) = http_get(addr, "/static/style.css").await;
+    assert_eq!(status, 200);
+    assert!(response.contains("text/css"));
+
+    let (status, _) = http_get(addr, "/static/does-not-exist.css").await;
     assert_eq!(status, 404);
 }
 

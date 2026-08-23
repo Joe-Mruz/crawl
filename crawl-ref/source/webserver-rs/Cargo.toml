@@ -18,7 +18,7 @@ path = "src/lib.rs"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "io-util", "process", "signal", "sync", "time"] }
 axum = { version = "0.8", features = ["ws"] }
 tower = { version = "0.4" }
-tower-http = { version = "0.6", features = ["fs", "trace"] }
+tower-http = { version = "0.6", features = ["trace"] }
 hyper = { version = "1" }
 
 serde = { version = "1", features = ["derive"] }
@@ -35,6 +35,12 @@ anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 
 rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Compile-time embedded UI assets (assets/templates, assets/static) - see
+# src/http/assets.rs. Decouples webserver-rs from crawl-ref/source/webserver
+# at runtime; "debug-embed" is off by default so `cargo run` in dev picks up
+# on-disk edits under assets/ without recompiling.
+rust-embed = "8"
 
 rand = "0.8"
 flate2 = "1"

@@ -52,7 +52,6 @@ async fn spawn_test_server(crawl_binary: PathBuf, rcs_dir: &std::path::Path) -> 
 
     let mut config = ServerConfig::default();
     config.dgl_mode = true;
-    config.template_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../webserver/templates");
 
     let mut games = BTreeMap::new();
     games.insert(
