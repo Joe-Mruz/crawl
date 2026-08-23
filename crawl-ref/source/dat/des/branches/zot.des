@@ -4760,7 +4760,7 @@ ENDMAP
 
 NAME:       hall_of_Zot_4
 TAGS:       extra transparent allow_dup no_dump
-DEPTH:      Zot:4
+DEPTH:      Zot:3
 CHANCE:     100%
 LFLOORCOL:  lightblue
 LROCKCOL:   magenta

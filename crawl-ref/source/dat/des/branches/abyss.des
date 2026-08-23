@@ -608,7 +608,7 @@ KMONS:   & = lich
 KMONS:   @ = deep elf sorcerer
 KMONS:   Z = nonbase draconian
 ITEM:    parchment w:19 / randbook numspells:2 w:1
-ITEM:    scroll of amnesia pre_id / scroll of identify pre_id / \
+ITEM:    scroll of amnesia pre_id / \
          scroll of silence pre_id / scroll of noise pre_id
 KFEAT:   _ = altar_sif_muna
 SHUFFLE: ABCDEF

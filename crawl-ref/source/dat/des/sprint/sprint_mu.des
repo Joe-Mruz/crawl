@@ -168,7 +168,7 @@ MONS: patrolling crimson imp ; wand of flame charges:1 / \
 MONS: patrolling human hd:2 hp:35 exp:26
 KITEM: * = potion of enlightenment pre_id q:2 / potion of enlightenment q:1 / any potion, \
  potion of mutation pre_id q:2 / potion of mutation q:1 / any potion, \
- scroll of identify pre_id q:2/ scroll of identify q:1 / any scroll, \
+ any scroll, \
  scroll of torment / scroll of poison / scroll of immolation, \
  potion of mutation
 SUBST: T = t.
@@ -199,7 +199,7 @@ MONS: patrolling crimson imp ; wand of flame charges:1 / \
 MONS: patrolling human hd:2 hp:35 exp:26
 KITEM: * = potion of enlightenment pre_id q:2 / potion of enlightenment q:1 / any potion, \
  potion of mutation pre_id q:2 / potion of mutation q:1 / any potion, \
- scroll of identify pre_id q:2 / scroll of identify q:1 / any scroll, \
+ any scroll, \
  scroll of torment / scroll of poison / scroll of immolation, \
  potion of mutation
 
@@ -764,7 +764,7 @@ MONS: spriggan defender hd:5 hp:55 exp:301 ; dagger
 MONS: obsidian statue / orange crystal statue
 MONS: thermic dynamo, skeletal warrior
 KMONS: 2 = glass eye
-KITEM: 2 = q:10 scroll of identify pre_id
+KITEM: 2 = q:10 scroll of fog pre_id
 KMONS: P = plant
 SUBST: P = PPPPPPPPP.
 : local uniq = util.random_subset({ "Donald", "Frances", "Louise",

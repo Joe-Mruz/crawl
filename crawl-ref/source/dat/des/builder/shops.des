@@ -1568,7 +1568,7 @@ ENDMAP
 # top tier equipment for a single gold... if you're on zot:5
 NAME:   hellmonk_bargain_basement
 TAGS:   extra
-DEPTH:  Zot:5
+DEPTH:  Zot:3
 WEIGHT: 3
 KFEAT:  S = general shop type:Last-Chance suffix:Deals greed:0 count:7 ; \
  any ring randart w:15 | any amulet randart w:15 | quick blade randart | \
@@ -2298,8 +2298,8 @@ NAME:  nicolae_shop_information_kiosk
 TAGS:  transparent extra no_rotate no_vmirror no_pool_fixup
 DEPTH: D:1-7
 KFEAT: S = general shop type:Information suffix:Kiosk count:4 use_all ; \
-           scroll of identify q:1 | scroll of identify q:2 | \
-           scroll of revelation q:1 | scroll of revelation q:2
+           scroll of revelation q:1 | scroll of revelation q:2 | \
+           scroll of revelation q:3 | scroll of revelation q:4
 MAP
    ...
   .WWW.

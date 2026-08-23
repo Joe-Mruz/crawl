@@ -32,7 +32,7 @@ function general_item_setup(e)
           potion of berserk rage pre_id /\
           potion of mutation pre_id")
   e.kitem("? = scroll of blinking pre_id /\
-          scroll of identify pre_id / scroll of fog pre_id /\
+          scroll of fog pre_id /\
           scroll of fear pre_id / scroll of enchant weapon pre_id q:2 /\
           scroll of enchant armour pre_id q:2")
 end
@@ -475,7 +475,7 @@ ENDMAP
 NAME:     swamp_1
 TAGS:     swamp_1
 KMONS:    1 = place:Swamp:1
-KMONS:    2 = place:Swamp:4
+KMONS:    2 = place:Swamp:2
 : line_setup(_G)
 : general_item_setup(_G)
 : lua_marker('~', props_marker {
@@ -491,7 +491,7 @@ ENDMAP
 NAME:     shoals_1
 TAGS:     shoals_1
 KMONS:    1 = place:Shoals:1
-KMONS:    2 = place:Shoals:4
+KMONS:    2 = place:Shoals:2
 COLOUR:   12 = brown
 : line_setup(_G)
 : general_item_setup(_G)
@@ -508,7 +508,7 @@ ENDMAP
 NAME:     spider_1
 TAGS:     spider_1
 KMONS:    1 = place:Spider:1
-KMONS:    2 = place:Spider:4
+KMONS:    2 = place:Spider:2
 COLOUR:   12 = brown
 : line_setup(_G)
 : general_item_setup(_G)
@@ -525,7 +525,7 @@ ENDMAP
 NAME:     snake_1
 TAGS:     snake_1
 KMONS:    1 = place:Snake:1
-KMONS:    2 = place:Snake:4
+KMONS:    2 = place:Snake:2
 COLOUR:   12 = lightgreen
 COLOUR:   # = yellow
 : line_setup(_G)
@@ -559,7 +559,7 @@ ENDMAP
 NAME:     vaults_1
 TAGS:     vaults_1
 KMONS:    1 = place:Vaults:1
-KMONS:    2 = place:Vaults:4
+KMONS:    2 = place:Vaults:3
 KFEAT:    v = permarock_wall
 COLOUR:   v = cyan
 : line_setup(_G)
@@ -658,7 +658,7 @@ KITEM:    2 = decaying rune of zot
 : line_setup(_G)
 : general_item_setup(_G)
 : lua_marker('~', props_marker {
-:           door_description_suffix=" to Swamp:4",
+:           door_description_suffix=" to Swamp:2",
 :           })
 MAP
 tttttttttttttt
@@ -677,7 +677,7 @@ KITEM:    2 = barnacled rune of zot
 : line_setup(_G)
 : general_item_setup(_G)
 : lua_marker('~', props_marker {
-:           door_description_suffix=" to Shoals:4",
+:           door_description_suffix=" to Shoals:2",
 :           })
 MAP
 xxxxxxxxxxxxxx
@@ -697,7 +697,7 @@ KITEM:    2 = gossamer rune of zot
 : line_setup(_G)
 : general_item_setup(_G)
 : lua_marker('~', props_marker {
-:           door_description_suffix=" to Spider:4",
+:           door_description_suffix=" to Spider:2",
 :           })
 MAP
 xxxxxxxxxxxxxx
@@ -717,7 +717,7 @@ COLOUR:   # = yellow
 : line_setup(_G)
 : general_item_setup(_G)
 : lua_marker('~', props_marker {
-:           door_description_suffix=" to Snake:4",
+:           door_description_suffix=" to Snake:2",
 :           })
 MAP
 ##############
@@ -744,7 +744,7 @@ COLOUR:   v = cyan
 : line_setup(_G)
 : general_item_setup(_G)
 : lua_marker('~', props_marker {
-:           door_description_suffix=" to Vaults:5",
+:           door_description_suffix=" to Vaults:3",
 :           })
 MAP
 vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -872,7 +872,7 @@ TAGS:     zot_1
 KMONS:    1 = place:Zot:1 w:30 / base draconian / nonbase draconian
 KMONS:    2 = place:Zot:2 w:30 / base draconian / nonbase draconian
 KMONS:    3 = place:Zot:3 w:30 / base draconian / nonbase draconian
-KMONS:    4 = place:Zot:4 w:30 / base draconian / nonbase draconian
+KMONS:    4 = place:Zot:3 w:30 / base draconian / nonbase draconian
 COLOUR:   # = white
 COLOUR:   1 = lightgrey
 COLOUR:   X = blue
@@ -915,7 +915,7 @@ COLOUR:   # = lightmagenta
 : line_setup(_G)
 : general_item_setup(_G)
 : lua_marker('~', props_marker {
-:           door_description_suffix=" to Zot:5",
+:           door_description_suffix=" to Zot:3",
 :           })
 : lua_marker('<', props_marker {
 :           door_description_suffix=" to the ~*~Extended Endgame~*~",

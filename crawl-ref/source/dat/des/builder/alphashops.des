@@ -117,7 +117,7 @@
 
       elseif s == "I" then i = { "scroll of immolation",
        "ice dragon scales", "book of ice",
-       "potion of invisibility", "ring of intelligence", "scroll of identify",
+       "potion of invisibility", "ring of intelligence",
        "wand of iceblast", "manual of invocations", "manual of ice magic",
        "book of iron", "inkwell talisman" }
 

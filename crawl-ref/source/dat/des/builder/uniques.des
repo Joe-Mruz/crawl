@@ -307,7 +307,7 @@ DEPTH:  Depths:1-2, Elf, Snake, Spider, Vaults:1-3
 : place_unique(_G, "Asterion")
 
 NAME:   uniq_bai_suzhen
-DEPTH:  Depths:1-2, Elf:$, Swamp:3-, Snake:3-, Shoals:3-, Spider:3-, Vaults:2-
+DEPTH:  Depths:1-2, Elf:$, Swamp:2-, Snake:2-, Shoals:2-, Spider:2-, Vaults:2-
 : place_unique(_G, "Bai Suzhen")
 
 # Initial placement of Boris: he may regenerate on later levels after
@@ -343,7 +343,7 @@ DEPTH:  Depths:3-, Vaults:2-, Crypt
 : place_unique(_G, "Margery band")
 
 NAME:   uniq_mara
-DEPTH:  Depths, !Depths:$, Elf:$, Swamp:3-, Snake:3-, Shoals:3-, Spider:3-
+DEPTH:  Depths, !Depths:$, Elf:$, Swamp:2-, Snake:2-, Shoals:2-, Spider:2-
 DEPTH:  Vaults:2-
 : place_unique(_G, "Mara")
 

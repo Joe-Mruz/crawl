@@ -32,7 +32,7 @@ ENDMAP
 NAME: david_orc_1_choice
 TAGS: orc_entry
 MONS: orc, warg / orc priest / orc warrior, orc warrior / orc
-ITEM: % / scroll of identify pre_id / scroll of teleportation pre_id
+ITEM: % / scroll of teleportation pre_id
 ITEM: % / w:2 * / scroll of blinking pre_id / scroll of fear pre_id
 SHUFFLE: %1
 ORIENT: float

@@ -5566,11 +5566,11 @@ ITEM:   any scroll / any book w:6
 MONS:   arcanist w:25 / occultist w:25 / necromancer w:20 / \
         deep elf pyromancer w:20 / deep elf zephyrmancer w:20 / \
         orc sorcerer / ogre mage / naga mage / vampire mage
-ITEM:   scroll of identify w:2 / any scroll w:8 / any book w:4
+ITEM:   any scroll w:8 / any book w:4
 : else
 MONS:   arcanist w:25 / deep elf pyromancer w:25 / orc sorcerer / \
         kobold geomancer w:5 / kobold demonologist w:15
-ITEM:   scroll of identify w:3 / scroll of amnesia w:2 / \
+ITEM:   scroll of amnesia w:2 / \
         any scroll w:5 / randbook numspells:2 w:3
 : end
 SUBST:  c : cx
