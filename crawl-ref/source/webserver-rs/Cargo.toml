@@ -59,11 +59,14 @@ time = "0.3"
 
 futures-util = "0.3"
 bytes = "1"
+axum-server = { version = "0.8.0", features = ["tls-rustls"] }
+rustls = { version = "0.23.43", default-features = false, features = ["aws-lc-rs", "std"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3"
 tokio-tungstenite = "0.29"
+tokio-rustls = "0.26.4"
 
 [profile.dev]
 # keep incremental builds fast; nothing unusual needed for a webserver crate

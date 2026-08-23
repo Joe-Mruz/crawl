@@ -6,6 +6,15 @@ dgl_mode: true
 bind_address: ""
 bind_port: 8080
 
+# HTTPS/WSS: set both cert/key to enable. bind_nonsecure can be true
+# (serve both plain and TLS), false (TLS only), or "redirect" (redirect
+# all plain HTTP to HTTPS instead of serving it).
+# bind_nonsecure: true
+# ssl_address: ""
+# ssl_port: 8443
+# ssl_cert_file: "./cert.pem"
+# ssl_key_file: "./key.pem"
+
 password_db: "./webserver/passwd.db3"
 settings_db: "./webserver/user_settings.db3"
 static_path: "./webserver/static"

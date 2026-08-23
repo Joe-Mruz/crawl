@@ -46,6 +46,13 @@ binary):
   `/gamedata/<version>/<path>`, static asset serving.
 - A minimal, purpose-built template renderer covering the actual Tornado
   template syntax used by `client.html`/`banner.html`/`footer.html`.
+- **HTTPS/WSS**, via `axum-server` + `rustls` (no OpenSSL/native-tls
+  dependency), reading the same `ssl_cert_file`/`ssl_key_file`/
+  `ssl_address`/`ssl_port`/`ssl_bind_pairs` config as Python. Plain HTTP
+  and HTTPS can be bound simultaneously (matching `bind_nonsecure` +
+  `ssl_options` both being set), including `bind_nonsecure: redirect`
+  (redirect-to-HTTPS instead of serving plaintext). Validated in
+  `tests/https.rs` against a real TLS handshake.
 
 ## What is NOT yet implemented (do not point real users at this yet)
 
