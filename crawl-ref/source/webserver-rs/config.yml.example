@@ -1,0 +1,34 @@
+# Example config.yml for webtiles-rs (and the Python server - the format
+# is shared). Copy to config.yml next to this file and edit as needed.
+# See ARCHITECTURE.md §6 / README.md for the full layering rules.
+
+dgl_mode: true
+bind_address: ""
+bind_port: 8080
+
+password_db: "./webserver/passwd.db3"
+settings_db: "./webserver/user_settings.db3"
+static_path: "./webserver/static"
+template_path: "./webserver/templates/"
+
+allow_password_reset: false
+admin_password_reset: false
+
+# Game definitions can also come from games.d/*.yml; this file's `games`
+# (if set) takes precedence and replaces (does not merge with) anything
+# loaded from games.d/.
+# templates:
+#   default:
+#     crawl_binary: "./crawl"
+#     rcfile_path: "./rcs/"
+#     macro_path: "./rcs/"
+#     morgue_path: "./rcs/%n"
+#     inprogress_path: "./rcs/running"
+#     ttyrec_path: "./rcs/ttyrecs/%n"
+#     socket_path: "./rcs"
+#     client_path: "./webserver/game_data/"
+# games:
+#   dcss-web-trunk:
+#     id: dcss-web-trunk
+#     name: "Play %v"
+#     version: trunk

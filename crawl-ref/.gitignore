@@ -218,6 +218,8 @@ passwd.db3
 user_settings.db3
 *.ttyrec
 /source/rcs
+/source/webserver-rs/target/
+/source/webserver-rs/cache*
 
 # junk when compiled with DGAMELAUNCH
 /source/cache*

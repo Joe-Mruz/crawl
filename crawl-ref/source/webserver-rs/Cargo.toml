@@ -1,0 +1,68 @@
+[package]
+name = "webtiles-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Rust rewrite of the DCSS WebTiles server (Axum + Tokio), protocol-compatible with the Python implementation in ../webserver"
+license = "GPL-2.0-or-later"
+publish = false
+
+[[bin]]
+name = "webtiles-rs"
+path = "src/main.rs"
+
+[lib]
+name = "webtiles_rs"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "io-util", "process", "signal", "sync", "time"] }
+axum = { version = "0.8", features = ["ws"] }
+tower = { version = "0.4" }
+tower-http = { version = "0.6", features = ["fs", "trace"] }
+hyper = { version = "1" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-appender = "0.2"
+
+thiserror = "1"
+anyhow = "1"
+
+clap = { version = "4", features = ["derive"] }
+
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+rand = "0.8"
+flate2 = "1"
+sha1 = "0.10"
+hex = "0.4"
+mime_guess = "2"
+
+# Password hashing: argon2 for all newly-created/changed passwords
+# (idiomatic modern choice - memory-hard, no system linking, no unsafe);
+# pwhash to *verify* legacy crypt(3)-format hashes already present in an
+# existing passwd.db3 migrated from the Python server (md5/sha256/sha512
+# crypt, and traditional DES crypt). See src/auth.rs.
+argon2 = "0.5"
+password-hash = { version = "0.5", features = ["std"] }
+pwhash = "1"
+
+libc = "0.2"
+
+pty-process = { version = "0.4", features = ["async"] }
+notify = "6"
+
+futures-util = "0.3"
+bytes = "1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3"
+tokio-tungstenite = "0.29"
+
+[profile.dev]
+# keep incremental builds fast; nothing unusual needed for a webserver crate
