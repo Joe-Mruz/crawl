@@ -24,19 +24,27 @@ C compiler/linker are required (SQLite is vendored via `rusqlite`'s
 
 The server needs the same on-disk layout as the Python server: a
 `config.yml`/`games.d/` directory, a `passwd.db3`/`user_settings.db3`,
-template files, and static assets. Point it at an existing
-`crawl-ref/source/webserver` checkout to reuse everything as-is:
+template files, and static assets. By default it looks for a `webserver/`
+directory next to the `webserver-rs` checkout it was built from
+(resolved relative to the binary's own location, not the current working
+directory - matching Python's `os.path.dirname(os.path.abspath(__file__))`
+default), so it can usually be run from anywhere with no flags:
 
 ```sh
-cd crawl-ref/source
-./webserver-rs/target/release/webtiles-rs --server-path ./webserver --port 8080
+./crawl-ref/source/webserver-rs/target/release/webtiles-rs --port 8080
+```
+
+Use `--server-path` to point at a different directory explicitly:
+
+```sh
+./webtiles-rs --server-path /path/to/webserver --port 8080
 ```
 
 ### Command-line options
 
 | Flag | Meaning |
 |---|---|
-| `--server-path <dir>` | Directory containing `config.yml`/`games.d/` (default `../webserver`). |
+| `--server-path <dir>` | Directory containing `config.yml`/`games.d/`. Defaults to `webserver/` next to the `webserver-rs` checkout (see above); the server logs the resolved path and game count at startup, and warns if no games were found. |
 | `-p, --port <port>` | Bind an HTTP port, disabling SSL (matches `webtiles/server.py`'s `-p`). |
 | `--ssl-port <port>` | Bind an SSL port (SSL/TLS is not yet implemented - see `MIGRATION.md`). |
 | `--logfile <path>` | Reserved for parity with the Python CLI; logging is currently controlled by `RUST_LOG` (see below). |
@@ -50,7 +58,7 @@ Uses [`tracing`](https://docs.rs/tracing). Control verbosity with the
 standard `RUST_LOG` environment variable, e.g.:
 
 ```sh
-RUST_LOG=info ./webtiles-rs --server-path ./webserver --port 8080
+RUST_LOG=info ./webtiles-rs --port 8080
 RUST_LOG=webtiles_rs=debug,tower_http=debug ./webtiles-rs ...
 ```
 
