@@ -111,7 +111,16 @@ async fn run_message_loop(mut socket: WebSocket, mut conn: Connection) {
                 }
             }
             Some(msg) = async { match outgoing { Some(rx) => rx.recv().await, None => std::future::pending().await } } => {
+                // matches `_on_crawl_end`: after the game itself ends
+                // (as opposed to the player explicitly asking to leave),
+                // the server must *also* push the client back to the
+                // lobby - `game_ended` alone only displays the exit
+                // reason, it doesn't navigate anywhere client-side.
+                let game_ended = matches!(&msg, OutgoingMessage::Typed(ServerMessage::GameEnded { .. }));
                 queue_outgoing(&mut conn, msg);
+                if game_ended {
+                    go_lobby(&mut conn).await;
+                }
                 if !flush(&mut conn, &mut socket).await { break; }
             }
             _ = ping_interval.tick() => {
@@ -280,7 +289,16 @@ async fn go_lobby(conn: &mut Connection) {
 /// NOT YET PORTED: non-`dgl_mode` auto-start-on-connect, save-slot cache
 /// invalidation, and `-no-player-bones` for account-restricted users.
 async fn play(conn: &mut Connection, game_id: &str) {
+    tracing::info!(
+        connection_id = conn.id,
+        %game_id,
+        dgl_mode = conn.state.config.dgl_mode,
+        known_game = conn.state.config.games.contains_key(game_id),
+        logged_in = conn.username.is_some(),
+        "play requested"
+    );
     if conn.state.config.dgl_mode && !conn.state.config.games.contains_key(game_id) {
+        tracing::warn!(connection_id = conn.id, %game_id, "play: unknown game_id, returning to lobby");
         go_lobby(conn).await;
         return;
     }

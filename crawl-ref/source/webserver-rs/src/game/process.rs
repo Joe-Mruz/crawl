@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 
 use crate::error::{Result, WebtilesError};
@@ -36,8 +36,21 @@ pub enum ProcessOutputLine {
 /// A running DCSS process. Owns the PTY and the ttyrec file (if enabled);
 /// output lines are delivered over an mpsc channel rather than callbacks
 /// (idiomatic replacement for Python's callback-attribute style).
+///
+/// The PTY is split into independent read/write halves (`tokio::io::split`)
+/// rather than kept as one `pty_process::Pty`: the read (output) side must
+/// be continuously drained for the lifetime of the process by a
+/// dedicated task (see `pty_reader`/`game::launch::start_game`), matching
+/// Python's `TerminalRecorder` (which keeps reading via the IOLoop even
+/// after `output_callback` is set to `None`, purely so the child's writes
+/// never block on a full PTY buffer) - if nothing reads this side, the
+/// child can hang mid-turn once the kernel's PTY buffer fills, which
+/// looks exactly like "the game stops responding after a few keystrokes".
 pub struct TerminalProcess {
-    pty: pty_process::Pty,
+    pty_write: tokio::io::WriteHalf<pty_process::Pty>,
+    /// Taken exactly once by the caller right after `spawn` to run the
+    /// continuous drain loop; `None` afterwards.
+    pub pty_reader: Option<tokio::io::ReadHalf<pty_process::Pty>>,
     child: tokio::process::Child,
     pub output_rx: mpsc::UnboundedReceiver<ProcessOutputLine>,
 }
@@ -116,8 +129,11 @@ impl TerminalProcess {
             }
         });
 
+        let (pty_reader, pty_write) = tokio::io::split(pty);
+
         Ok(Self {
-            pty,
+            pty_write,
+            pty_reader: Some(pty_reader),
             child,
             output_rx: rx,
         })
@@ -127,23 +143,10 @@ impl TerminalProcess {
     /// webserver during the stdout-bootstrap phase, before the game's own
     /// Unix socket takes over — see `ARCHITECTURE.md` §4.1/§4.2).
     pub async fn write_input(&mut self, data: &[u8]) -> Result<()> {
-        self.pty
+        self.pty_write
             .write_all(data)
             .await
             .map_err(|e| WebtilesError::Process(format!("failed to write pty input: {e}")))
-    }
-
-    /// Read one chunk from the PTY master. Returns `Ok(0)` at EOF (process
-    /// closed its end). Callers are expected to drive this in a loop,
-    /// writing each chunk to the ttyrec file and line-splitting it for
-    /// `ProcessOutputLine::Stdout` delivery (kept out of this method so the
-    /// ttyrec-writing and ttyrec-disabled cases share one read loop without
-    /// duplicating buffering logic).
-    pub async fn read_pty_chunk(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.pty
-            .read(buf)
-            .await
-            .map_err(|e| WebtilesError::Process(format!("failed to read pty output: {e}")))
     }
 
     /// Send `SIGHUP` (cooperative stop — DCSS auto-saves and quits).

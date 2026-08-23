@@ -8,7 +8,7 @@
 //! stale-lock purge flow (`ARCHITECTURE.md` §4.3), `-no-player-bones` for
 //! account holds, and save-slot info.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -102,7 +102,20 @@ pub async fn start_game(
         term_cols,
     };
 
-    let terminal_process = TerminalProcess::spawn(spawn_args, None, None).await?;
+    let mut terminal_process = TerminalProcess::spawn(spawn_args, None, None).await?;
+
+    // Must be continuously drained for the lifetime of the process, or
+    // the child's writes to its own stdout/tty block once the kernel's
+    // PTY buffer fills - matching Python's `TerminalRecorder`, which
+    // keeps reading via the IOLoop even after `output_callback` is set to
+    // `None`. Without this, a real game appears to "lock up" after a
+    // handful of turns once incidental PTY output (bootstrap text,
+    // terminal control sequences, etc.) accumulates past the buffer size.
+    let pty_reader = terminal_process
+        .pty_reader
+        .take()
+        .expect("pty_reader is only taken once, immediately after spawn");
+    tokio::spawn(drain_pty_output(pty_reader));
 
     wait_for_socket(&process_socket_path).await?;
 
@@ -112,9 +125,20 @@ pub async fn start_game(
         .unwrap_or_else(std::env::temp_dir);
     let game_socket = GameSocket::connect(&own_socket_dir, &process_socket_path, true).await?;
 
-    let (session, input_rx, control_rx) = GameSession::new_with_channels(username, game_id);
+    let (session, input_rx, pty_input_rx, control_rx) = GameSession::new_with_channels(username, game_id);
     let session = Arc::new(session);
     game_manager.register(session.clone()).await;
+
+    // Matches `CrawlProcessHandler.client_path` being read from config at
+    // process start (rather than waiting for the DCSS process's own
+    // `client_path` socket message, which real builds may never send -
+    // see `handle_process_message`'s fallback below).
+    if let Some(client_path) = &resolved.fields.client_path {
+        let client_path = resolved.templated(client_path, Some(username))?;
+        if let Err(e) = register_client_html(&session, &game_data, &client_path, None).await {
+            tracing::warn!(game_id = session.id, error = %e, "failed to render game.html from configured client_path");
+        }
+    }
 
     let morgue_url = resolved
         .fields
@@ -132,12 +156,30 @@ pub async fn start_game(
     ));
     tokio::spawn(supervise_process(
         terminal_process,
+        pty_input_rx,
         control_rx,
         session.clone(),
         game_manager.clone(),
     ));
 
     Ok(session)
+}
+
+/// Continuously read (and discard) PTY output for the lifetime of the
+/// process. The data itself isn't meaningful post-handoff to the AF_UNIX
+/// socket (real game state comes from there instead - see
+/// `bridge_socket`), but the read must keep happening regardless, purely
+/// so the child's own writes never block. NOT YET PORTED: ttyrec
+/// recording would hook in here (writing each chunk via
+/// `write_ttyrec_chunk` before discarding).
+async fn drain_pty_output(mut reader: impl tokio::io::AsyncRead + Unpin) {
+    let mut buf = [0u8; 4096];
+    loop {
+        match tokio::io::AsyncReadExt::read(&mut reader, &mut buf).await {
+            Ok(0) | Err(_) => break, // EOF or the pty closed - process is gone/going
+            Ok(_) => {}
+        }
+    }
 }
 
 fn templated_path(resolved: &ResolvedGame, field: &str, username: &str) -> Result<PathBuf> {
@@ -181,9 +223,13 @@ fn format_timestamp() -> String {
 /// Owns the [`TerminalProcess`], waits for it to exit (or a
 /// [`ProcessControl`] signal asking it to stop/be killed), then notifies
 /// watchers and unregisters the game. Matches
-/// `CrawlProcessHandler.stop`/`.kill`/`handle_process_end`.
+/// `CrawlProcessHandler.stop`/`.kill`/`handle_process_end`. Also owns
+/// writing decoded `input` keystrokes to the PTY - matching
+/// `CrawlProcessHandlerBase.handle_input`'s `process.write_input` call
+/// (this, not `bridge_socket`, holds the `TerminalProcess`/PTY handle).
 async fn supervise_process(
     mut process: TerminalProcess,
+    mut pty_input_rx: tokio::sync::mpsc::UnboundedReceiver<Vec<u8>>,
     mut control_rx: tokio::sync::mpsc::UnboundedReceiver<ProcessControl>,
     session: Arc<GameSession>,
     game_manager: GameManager,
@@ -193,6 +239,12 @@ async fn supervise_process(
             status = process.wait() => {
                 tracing::info!(game_id = session.id, username = %session.username, status = ?status, "game process exited");
                 break;
+            }
+            input = pty_input_rx.recv() => {
+                match input {
+                    Some(bytes) => { let _ = process.write_input(&bytes).await; }
+                    None => {}
+                }
             }
             ctrl = control_rx.recv() => {
                 match ctrl {
@@ -261,22 +313,13 @@ async fn handle_process_message(
 
     match classified {
         FromProcessMessage::Control(ProcessControlMessage::ClientPath { path, version }) => {
-            let mut hasher = Sha1::new();
-            hasher.update(path.as_bytes());
-            if let Some(v) = &version {
-                hasher.update(v.as_bytes());
-            }
-            let hash = hex::encode(hasher.finalize());
-
-            game_data.register(hash.clone(), PathBuf::from(&path).join("static")).await;
-
-            let template_dir = PathBuf::from(&path).join("templates");
-            let ctx = crate::http::templates::TemplateContext::default().with_string("version", &hash);
-            match crate::http::templates::render_file(&template_dir, "game.html", &ctx) {
-                Ok(content) => {
-                    session.broadcast(ServerMessage::GameClient { version: hash, content }).await;
+            // Fallback only - matches Python's `if self.client_path ==
+            // None`: a config-provided `client_path` (the common case,
+            // set up-front in `start_game`) always wins.
+            if session.client_html().await.is_none() {
+                if let Err(e) = register_client_html(session, game_data, &path, version).await {
+                    tracing::warn!(game_id = session.id, error = %e, "failed to render game.html from process client_path");
                 }
-                Err(e) => tracing::warn!(game_id = session.id, error = %e, "failed to render game.html"),
             }
         }
         FromProcessMessage::Control(ProcessControlMessage::FlushMessages) => {
@@ -323,6 +366,50 @@ async fn handle_process_message(
                 session.broadcast(crate::game::session::OutgoingMessage::Raw(text)).await;
             }
         }
+    }
+}
+
+/// Render `game.html` for `client_path` (a `static`/`templates` directory
+/// pair, matching `webserver/game_data/`) and record it on `session` if
+/// not already set, broadcasting it to any watchers already connected.
+/// Matches `CrawlProcessHandler._send_client`'s hash/render logic, called
+/// either from configured `client_path` (the common case) or as a
+/// fallback from the process's own `client_path` message.
+async fn register_client_html(
+    session: &Arc<GameSession>,
+    game_data: &GameDataRegistry,
+    client_path: &str,
+    version: Option<String>,
+) -> Result<()> {
+    let abs = abspath(Path::new(client_path));
+    let mut hasher = Sha1::new();
+    hasher.update(abs.to_string_lossy().as_bytes());
+    if let Some(v) = &version {
+        hasher.update(v.as_bytes());
+    }
+    let hash = hex::encode(hasher.finalize());
+
+    game_data.register(hash.clone(), abs.join("static")).await;
+
+    let template_dir = abs.join("templates");
+    let ctx = crate::http::templates::TemplateContext::default().with_string("version", &hash);
+    let content = crate::http::templates::render_file(&template_dir, "game.html", &ctx)
+        .map_err(|e| WebtilesError::Game(format!("failed to render game.html: {e}")))?;
+
+    if session.set_client_html_if_unset(hash.clone(), content.clone()).await {
+        session.broadcast(ServerMessage::GameClient { version: hash, content }).await;
+    }
+    Ok(())
+}
+
+/// Like Python's `os.path.abspath`: make `path` absolute relative to the
+/// current directory if it isn't already, without requiring the path to
+/// exist or resolving symlinks (unlike `fs::canonicalize`).
+fn abspath(path: &std::path::Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(path)
     }
 }
 

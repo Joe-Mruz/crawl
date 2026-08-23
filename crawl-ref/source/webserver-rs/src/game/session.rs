@@ -15,6 +15,31 @@ use tokio::sync::{mpsc, RwLock};
 
 use crate::protocol::{LobbyEntry, ServerMessage};
 
+/// If `raw` is a `{"msg":"input", "data": [codepoint, ...], "text": "..."}`
+/// message, decode it to the literal keystroke bytes it represents
+/// (`data` codepoints first, then `text` appended - matching Python's
+/// `handle_input`: `for x in obj.get("data", []): data += chr(x); data +=
+/// obj.get("text", "")`). Returns `None` for anything else (including
+/// malformed `input` messages), which the caller forwards to the process
+/// socket unchanged instead.
+fn decode_input_message(raw: &str) -> Option<Vec<u8>> {
+    let value: serde_json::Value = serde_json::from_str(raw).ok()?;
+    if value.get("msg")?.as_str()? != "input" {
+        return None;
+    }
+    let mut text = String::new();
+    if let Some(codes) = value.get("data").and_then(|d| d.as_array()) {
+        for code in codes {
+            let code = code.as_u64()? as u32;
+            text.push(char::from_u32(code)?);
+        }
+    }
+    if let Some(t) = value.get("text").and_then(|t| t.as_str()) {
+        text.push_str(t);
+    }
+    Some(text.into_bytes())
+}
+
 /// Per-connection outgoing mailbox. Bounded so that one slow/stuck watcher
 /// cannot apply backpressure to the game process or to other watchers
 /// (`ARCHITECTURE.md` "Connection Management"): a full queue means that
@@ -135,9 +160,27 @@ pub struct GameSession {
     where_info: RwLock<WhereInfo>,
     last_milestone: RwLock<Option<String>>,
     exit_info: RwLock<ExitInfo>,
+    /// The rendered `game.html` (version hash, content), matching
+    /// `CrawlProcessHandler.client_path`/`_send_client`. Set once - either
+    /// up-front from the game config's `client_path` (the common case, at
+    /// `game::launch::start_game` time) or, as a fallback, from the DCSS
+    /// process's own `client_path` socket message (only if the config
+    /// didn't already provide one - matches Python's
+    /// `if self.client_path == None` guard). New watchers get this sent
+    /// to them immediately on `add_watcher`, rather than waiting for a
+    /// broadcast that may never come.
+    client_html: RwLock<Option<(String, String)>>,
     /// Raw client messages to forward verbatim to the process socket
     /// (`game::launch::bridge_socket` owns the receiving end).
     input_tx: mpsc::UnboundedSender<String>,
+    /// Decoded keystroke bytes to write directly to the process's PTY
+    /// stdin, matching `CrawlProcessHandler.handle_input`'s special case
+    /// for `{"msg":"input"}` (extracting `data`/`text` and calling
+    /// `process.write_input` - unlike every other client message, which
+    /// goes to the AF_UNIX game socket, `input` is never understood by
+    /// that socket's protocol at all). `game::launch::supervise_process`
+    /// owns the receiving end (it - not `bridge_socket` - holds the PTY).
+    pty_input_tx: mpsc::UnboundedSender<Vec<u8>>,
     /// Stop/kill signals for the process (`game::launch::supervise_process`
     /// owns the receiving end).
     control_tx: mpsc::UnboundedSender<ProcessControl>,
@@ -156,8 +199,14 @@ impl GameSession {
     pub fn new_with_channels(
         username: impl Into<String>,
         game_config_id: impl Into<String>,
-    ) -> (Self, mpsc::UnboundedReceiver<String>, mpsc::UnboundedReceiver<ProcessControl>) {
+    ) -> (
+        Self,
+        mpsc::UnboundedReceiver<String>,
+        mpsc::UnboundedReceiver<Vec<u8>>,
+        mpsc::UnboundedReceiver<ProcessControl>,
+    ) {
         let (input_tx, input_rx) = mpsc::unbounded_channel();
+        let (pty_input_tx, pty_input_rx) = mpsc::unbounded_channel();
         let (control_tx, control_rx) = mpsc::unbounded_channel();
         let session = Self {
             id: next_game_id(),
@@ -170,19 +219,47 @@ impl GameSession {
             where_info: RwLock::new(WhereInfo::default()),
             last_milestone: RwLock::new(None),
             exit_info: RwLock::new(ExitInfo::default()),
+            client_html: RwLock::new(None),
             input_tx,
+            pty_input_tx,
             control_tx,
         };
-        (session, input_rx, control_rx)
+        (session, input_rx, pty_input_rx, control_rx)
     }
 
-    /// Forward one raw client message verbatim to the process socket,
-    /// matching `CrawlProcessHandler.handle_input`'s pass-through of
-    /// everything except `force_terminate`/`stop_stale_process_purge`
-    /// (those two are webserver-only and NOT YET PORTED here - see
-    /// `ARCHITECTURE.md` §4.3).
+    /// Record the rendered game client (version hash + `game.html`
+    /// content) if not already set. Returns `true` if this call is the
+    /// one that set it (i.e. the caller should broadcast it to any
+    /// already-connected watchers; a fresh session has none yet, but the
+    /// process-message fallback path can race with watchers already
+    /// having joined).
+    pub async fn set_client_html_if_unset(&self, version: String, content: String) -> bool {
+        let mut guard = self.client_html.write().await;
+        if guard.is_some() {
+            return false;
+        }
+        *guard = Some((version, content));
+        true
+    }
+
+    pub async fn client_html(&self) -> Option<(String, String)> {
+        self.client_html.read().await.clone()
+    }
+
+    /// Forward one raw client message to wherever it belongs: `input`
+    /// messages are decoded (`data`/`text`) and written to the process's
+    /// PTY stdin; everything else is forwarded verbatim to the process
+    /// socket. Matches `CrawlProcessHandler.handle_input` (minus
+    /// `force_terminate`/`stop_stale_process_purge`, which are
+    /// webserver-only and NOT YET PORTED here - see `ARCHITECTURE.md`
+    /// §4.3).
     pub fn send_input(&self, raw_message: impl Into<String>) {
-        let _ = self.input_tx.send(raw_message.into());
+        let raw_message = raw_message.into();
+        if let Some(bytes) = decode_input_message(&raw_message) {
+            let _ = self.pty_input_tx.send(bytes);
+        } else {
+            let _ = self.input_tx.send(raw_message);
+        }
     }
 
     /// Request a cooperative stop (`SIGHUP`), matching `.stop()`.
@@ -204,6 +281,12 @@ impl GameSession {
     }
 
     pub async fn add_watcher(&self, watcher: Watcher) {
+        // matches `CrawlProcessHandler.add_watcher`'s immediate
+        // `_send_client` call - the browser needs this to render anything
+        // at all, so it must not wait for a subsequent broadcast.
+        if let Some((version, content)) = self.client_html().await {
+            watcher.try_send(ServerMessage::GameClient { version, content });
+        }
         self.watchers.write().await.insert(watcher.connection_id, watcher);
     }
 

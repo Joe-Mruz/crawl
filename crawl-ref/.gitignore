@@ -220,6 +220,8 @@ user_settings.db3
 /source/rcs
 /source/webserver-rs/target/
 /source/webserver-rs/cache*
+/source/webserver-rs/crash--*.txt
+/source/webserver-rs/*.cs
 
 # junk when compiled with DGAMELAUNCH
 /source/cache*
